@@ -1,0 +1,29 @@
+You are implementing a clean-room rebuild from spec.
+
+Rules:
+1) Use ONLY the attached CLEANROOM_SPEC.md requirements.
+2) Do not copy/adapt prior code; write original implementation.
+3) Complete full stack and deployment-ready configuration.
+4) If provider choices are unspecified, default to:
+   - Hosting: Vercel
+   - Backend: Node.js + Express
+   - Storage: S3-compatible
+   - Email: Resend
+5) If secrets/credentials are unavailable, still finish all code and provide exact final run/deploy commands.
+
+Deliver:
+- Working frontend + backend
+- POST /api/application/submit and POST /api/application/invite
+- Upload handling + PDF packet submission
+- Invite email flow
+- Validation + rate limiting + secure env handling
+- .env.example
+- README (setup/deploy/rollback/smoke tests)
+- Final verification summary with explicit pass/fail for each acceptance criterion
+
+Definition of done:
+- End-to-end submit works
+- Invite flow works
+- Uploads persist correctly
+- No placeholder runtime values left unresolved in production config
+- Project is ready for real go-live
