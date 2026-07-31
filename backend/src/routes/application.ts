@@ -139,6 +139,8 @@ applicationRouter.post(
         applicantEmail: payload.applicant.email,
         applicationGroup: payload.application_group,
         appBaseUrl,
+        payload,
+        fileCount: storedFiles.length + 1,
       });
       const applicantMail = await sendApplicantConfirmation({
         submissionId,
@@ -151,15 +153,20 @@ applicationRouter.post(
         submission_id: submissionId,
         application_group: payload.application_group,
         file_count: storedFiles.length + 1,
+        notify_to: config.email.notifyTo,
         notify_delivered: notify.delivered,
+        notify_error: notify.error,
         applicant_mail_delivered: applicantMail.delivered,
       });
 
       return res.status(201).json({
         success: true,
-        message: "Application submitted successfully",
+        message: notify.delivered
+          ? "Application submitted successfully"
+          : "Application submitted, but the notification email could not be delivered",
         submission_id: submissionId,
-        email_delivered: notify.delivered && applicantMail.delivered,
+        email_delivered: notify.delivered,
+        email_to: config.email.notifyTo,
         files: [...storedFiles, summaryPdf].map((f) => ({
           key: f.key,
           originalName: f.originalName,

@@ -1,19 +1,16 @@
-# Email setup (Resend) — required for real invites & submission alerts
+# Email setup
 
-Right now, without a Resend API key, CoastApply **does not put mail in inboxes**.
-It only logs messages on the server (`EMAIL_DRIVER=console`).
+## Submission alerts → your inbox (default)
 
-## What you need
+Every successful application notifies:
 
-1. Create a free account at https://resend.com
-2. Create an API key
-3. For testing, you can send **to your own Gmail** using Resend’s test sender:
-   - `EMAIL_FROM=CoastApply <onboarding@resend.dev>`
-   - `NOTIFY_EMAIL=sammyscottreid44@gmail.com`
-4. For production on `coastapply.com`, verify that domain in Resend, then use:
-   - `EMAIL_FROM=CoastApply <applications@coastapply.com>`
+`sammyscottreid44@gmail.com`
 
-## Set on the server / host
+This is sent from the applicant’s browser via FormSubmit (no API key).
+
+**First submission only:** check that Gmail (and spam) for a FormSubmit **activation / confirm** email. Click it once. After that, every new application lands in your inbox.
+
+## Optional: Resend (invites + applicant confirmations)
 
 ```bash
 EMAIL_DRIVER=resend
@@ -22,9 +19,5 @@ EMAIL_FROM=CoastApply <onboarding@resend.dev>
 NOTIFY_EMAIL=sammyscottreid44@gmail.com
 ```
 
-Restart the app after setting these.
-
-## Until the key is set
-
-- Co-applicant invites still generate a **copyable invite link** in the UI
-- Submissions are still saved; notification emails will not arrive
+With Resend you also get co-applicant invite emails and applicant confirmation emails.
+Without Resend, co-applicant invites still show a **copyable invite link** in the UI.

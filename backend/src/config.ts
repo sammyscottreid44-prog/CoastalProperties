@@ -27,9 +27,8 @@ const isProduction = nodeEnv === "production";
 const storageDriver = (process.env.STORAGE_DRIVER ?? (isProduction ? "s3" : "local")) as
   | "s3"
   | "local";
-const emailDriver = (process.env.EMAIL_DRIVER ?? (isProduction ? "resend" : "console")) as
-  | "resend"
-  | "console";
+const emailDriver = (process.env.EMAIL_DRIVER ??
+  (process.env.RESEND_API_KEY ? "resend" : "formsubmit")) as "resend" | "formsubmit" | "console";
 
 // Render injects RENDER_EXTERNAL_URL (e.g. https://coastapply.onrender.com)
 const renderExternalUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "") || "";
