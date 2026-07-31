@@ -22,8 +22,10 @@ services:
       - key: LOCAL_DATA_DIR
         value: ./data
       - key: EMAIL_DRIVER
-        value: formsubmit
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
       - key: EMAIL_FROM
-        value: CoastApply <applications@coastapply.com>
+        value: CoastApply <onboarding@resend.dev>
       - key: NOTIFY_EMAIL
         value: sammyscottreid44@gmail.com

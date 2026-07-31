@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { brand } from "../brand.js";
 import { config } from "../config.js";
@@ -8,7 +9,6 @@ export type EmailResult = {
   success: boolean;
   id?: string;
   error?: string;
-  /** true only when a real provider accepted the message */
   delivered: boolean;
   inviteUrl?: string;
 };
@@ -18,13 +18,10 @@ async function sendViaResend(params: {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 }): Promise<EmailResult> {
   if (!config.email.resendApiKey) {
-    return {
-      success: false,
-      delivered: false,
-      error: "RESEND_API_KEY is not configured",
-    };
+    return { success: false, delivered: false, error: "RESEND_API_KEY is not configured" };
   }
 
   const resend = new Resend(config.email.resendApiKey);
@@ -34,70 +31,52 @@ async function sendViaResend(params: {
     subject: params.subject,
     html: params.html,
     text: params.text,
+    replyTo: params.replyTo,
   });
 
   if (error) {
-    logger.error("email_send_failed", { to: params.to, error: error.message, driver: "resend" });
+    logger.error("email_send_failed", { driver: "resend", to: params.to, error: error.message });
     return { success: false, delivered: false, error: error.message };
   }
 
+  logger.info("email_sent", { driver: "resend", to: params.to, id: data?.id });
   return { success: true, delivered: true, id: data?.id };
 }
 
-/**
- * Delivers to a fixed inbox via FormSubmit (no API key).
- * First-time use: FormSubmit emails the inbox an activation link — click it once.
- */
-async function sendViaFormSubmit(params: {
+async function sendViaSmtp(params: {
   to: string;
   subject: string;
   html: string;
   text: string;
   replyTo?: string;
 }): Promise<EmailResult> {
-  const endpoint = `https://formsubmit.co/ajax/${encodeURIComponent(params.to)}`;
+  const { host, port, secure, user, pass } = config.email.smtp;
+  if (!host || !user || !pass) {
+    return { success: false, delivered: false, error: "SMTP is not fully configured" };
+  }
+
   try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        _subject: params.subject,
-        _template: "table",
-        _captcha: "false",
-        name: brand.productName,
-        email: params.replyTo || config.email.notifyTo,
-        message: params.text,
-        html_body: params.html,
-      }),
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
     });
 
-    const body = (await res.json().catch(() => ({}))) as {
-      success?: string | boolean;
-      message?: string;
-      error?: string;
-    };
+    const info = await transporter.sendMail({
+      from: config.email.from || user,
+      to: params.to,
+      subject: params.subject,
+      text: params.text,
+      html: params.html,
+      replyTo: params.replyTo,
+    });
 
-    if (!res.ok) {
-      const err = body.message || body.error || `FormSubmit HTTP ${res.status}`;
-      logger.error("email_send_failed", { to: params.to, error: err, driver: "formsubmit" });
-      return { success: false, delivered: false, error: err };
-    }
-
-    const msg = String(body.message || body.success || "ok");
-    logger.info("email_formsubmit_delivery", { to: params.to, message: msg });
-
-    // Activation responses still count as "accepted" by the provider; inbox gets the activation mail.
-    return {
-      success: true,
-      delivered: true,
-      id: `formsubmit-${Date.now()}`,
-    };
+    logger.info("email_sent", { driver: "smtp", to: params.to, id: info.messageId });
+    return { success: true, delivered: true, id: info.messageId };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "FormSubmit request failed";
-    logger.error("email_send_failed", { to: params.to, error: message, driver: "formsubmit" });
+    const message = err instanceof Error ? err.message : "SMTP send failed";
+    logger.error("email_send_failed", { driver: "smtp", to: params.to, error: message });
     return { success: false, delivered: false, error: message };
   }
 }
@@ -105,9 +84,13 @@ async function sendViaFormSubmit(params: {
 async function sendViaConsole(params: {
   to: string;
   subject: string;
-  html: string;
   text: string;
 }): Promise<EmailResult> {
+  logger.warn("email_not_configured", {
+    to: params.to,
+    subject: params.subject,
+    hint: "Set RESEND_API_KEY (recommended) or SMTP_HOST/SMTP_USER/SMTP_PASS",
+  });
   logger.info("email_console_delivery", {
     to: params.to,
     subject: params.subject,
@@ -116,9 +99,7 @@ async function sendViaConsole(params: {
   return {
     success: false,
     delivered: false,
-    id: `console-${Date.now()}`,
-    error:
-      "Email is in console mode. Set EMAIL_DRIVER=formsubmit (or resend) to deliver real emails.",
+    error: "Email provider not configured",
   };
 }
 
@@ -128,40 +109,29 @@ async function deliver(params: {
   html: string;
   text: string;
   replyTo?: string;
-  /** Prefer FormSubmit for fixed operator inbox when resend isn't configured */
-  preferFormSubmit?: boolean;
   retries?: number;
 }): Promise<EmailResult> {
   const attempts = params.retries ?? 2;
   let lastError = "Unknown email error";
 
-  const driver =
-    config.emailDriver === "resend" && config.email.resendApiKey
-      ? "resend"
-      : config.emailDriver === "console"
-        ? "console"
-        : "formsubmit";
-
-  // Operator notifications: always allow FormSubmit fallback so submits reach the inbox
-  const effectiveDriver =
-    params.preferFormSubmit && driver === "console" ? "formsubmit" : driver;
-
   for (let i = 0; i <= attempts; i += 1) {
     try {
       let result: EmailResult;
-      if (effectiveDriver === "resend") {
+      if (config.emailDriver === "resend") {
         result = await sendViaResend(params);
-      } else if (effectiveDriver === "formsubmit") {
-        result = await sendViaFormSubmit(params);
+      } else if (config.emailDriver === "smtp") {
+        result = await sendViaSmtp(params);
+      } else if (config.email.resendApiKey) {
+        result = await sendViaResend(params);
+      } else if (config.email.smtp.host && config.email.smtp.user && config.email.smtp.pass) {
+        result = await sendViaSmtp(params);
       } else {
         result = await sendViaConsole(params);
       }
 
-      if (result.delivered) {
-        return result;
-      }
+      if (result.delivered) return result;
       lastError = result.error ?? lastError;
-      if (effectiveDriver === "console") {
+      if (config.emailDriver === "console" && !config.email.resendApiKey) {
         return result;
       }
     } catch (err) {
@@ -244,7 +214,6 @@ export async function sendInviteEmail(params: {
     </div>
   `;
 
-  // Invites to arbitrary addresses need Resend; FormSubmit is inbox-owner only.
   const result = await deliver({
     to: params.inviteeEmail,
     subject,
@@ -274,18 +243,16 @@ export async function sendSubmissionNotification(params: {
       <p><strong>Applicant:</strong> ${params.applicantName} (${params.applicantEmail})</p>
       <p><strong>Group:</strong> ${params.applicationGroup}</p>
       <pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;background:#f4f7f8;padding:12px;border-radius:8px;">${text.replace(/</g, "&lt;")}</pre>
-      <p><a href="${params.appBaseUrl}">Open CoastApply</a></p>
     </div>
   `;
 
-  // Always deliver operator alerts to NOTIFY_EMAIL (FormSubmit if Resend unavailable)
   return deliver({
     to: config.email.notifyTo,
     subject,
     html,
     text,
     replyTo: params.applicantEmail,
-    preferFormSubmit: true,
+    retries: 3,
   });
 }
 
@@ -316,14 +283,5 @@ export async function sendApplicantConfirmation(params: {
     </div>
   `;
 
-  // Only attempt when Resend is configured (arbitrary recipient)
-  if (config.emailDriver === "resend" && config.email.resendApiKey) {
-    return deliver({ to: params.applicantEmail, subject, html, text });
-  }
-
-  return {
-    success: true,
-    delivered: false,
-    error: "Applicant confirmation skipped (requires Resend)",
-  };
+  return deliver({ to: params.applicantEmail, subject, html, text });
 }

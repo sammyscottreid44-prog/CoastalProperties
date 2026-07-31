@@ -27,8 +27,16 @@ const isProduction = nodeEnv === "production";
 const storageDriver = (process.env.STORAGE_DRIVER ?? (isProduction ? "s3" : "local")) as
   | "s3"
   | "local";
-const emailDriver = (process.env.EMAIL_DRIVER ??
-  (process.env.RESEND_API_KEY ? "resend" : "formsubmit")) as "resend" | "formsubmit" | "console";
+
+const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
+const hasSmtp = Boolean(
+  process.env.SMTP_HOST?.trim() &&
+    process.env.SMTP_USER?.trim() &&
+    process.env.SMTP_PASS?.trim(),
+);
+
+const emailDriver = (process.env.EMAIL_DRIVER?.trim() ||
+  (hasResend ? "resend" : hasSmtp ? "smtp" : "console")) as "resend" | "smtp" | "console";
 
 // Render injects RENDER_EXTERNAL_URL (e.g. https://coastapply.onrender.com)
 const renderExternalUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "") || "";
@@ -55,7 +63,11 @@ if (isProduction) {
     requiredInProduction("RESEND_API_KEY", process.env.RESEND_API_KEY);
     requiredInProduction("EMAIL_FROM", process.env.EMAIL_FROM);
   }
-  // Allow Render auto-URL instead of forcing custom-domain env up front
+  if (emailDriver === "smtp") {
+    requiredInProduction("SMTP_HOST", process.env.SMTP_HOST);
+    requiredInProduction("SMTP_USER", process.env.SMTP_USER);
+    requiredInProduction("SMTP_PASS", process.env.SMTP_PASS);
+  }
   if (!process.env.CORS_ORIGINS && !renderExternalUrl) {
     requiredInProduction("CORS_ORIGINS", process.env.CORS_ORIGINS);
   }
@@ -90,6 +102,13 @@ export const config = {
     resendApiKey: process.env.RESEND_API_KEY ?? "",
     from: process.env.EMAIL_FROM ?? brand.emailFromDefault,
     notifyTo: process.env.NOTIFY_EMAIL ?? brand.contactEmail,
+    smtp: {
+      host: process.env.SMTP_HOST ?? "",
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: process.env.SMTP_SECURE === "true",
+      user: process.env.SMTP_USER ?? "",
+      pass: process.env.SMTP_PASS ?? "",
+    },
   },
   limits: {
     maxFileBytes: Number(process.env.MAX_FILE_BYTES ?? 10 * 1024 * 1024),

@@ -159,19 +159,15 @@ applicationRouter.post(
         applicant_mail_delivered: applicantMail.delivered,
       });
 
+      // Never expose operator inbox or delivery internals to the applicant UI
       return res.status(201).json({
         success: true,
-        message: notify.delivered
-          ? "Application submitted successfully"
-          : "Application submitted, but the notification email could not be delivered",
+        message: "Your application has been submitted successfully.",
         submission_id: submissionId,
-        email_delivered: notify.delivered,
-        email_to: config.email.notifyTo,
         files: [...storedFiles, summaryPdf].map((f) => ({
           key: f.key,
           originalName: f.originalName,
           size: f.size,
-          url: f.url,
         })),
       });
     } catch (err) {

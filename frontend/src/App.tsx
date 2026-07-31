@@ -3,7 +3,6 @@ import { Progress } from "./components/Progress";
 import { useDraft } from "./hooks/useDraft";
 import { submitApplication } from "./lib/api";
 import { brand } from "./lib/brand";
-import { notifyOperatorOfSubmission } from "./lib/notifyOperator";
 import { validateStep } from "./lib/validation";
 import { Landing } from "./steps/Landing";
 import {
@@ -89,17 +88,10 @@ export default function App() {
         return;
       }
 
-      const notify = await notifyOperatorOfSubmission({
-        submissionId: result.submission_id,
-        form,
-      });
-
       setSubmitState({
         status: "success",
         submissionId: result.submission_id,
-        message: notify.delivered
-          ? `Application submitted. A notification was sent to ${brand.contactEmail}.`
-          : "Application submitted successfully.",
+        message: "Your application has been submitted successfully.",
       });
       localStorage.removeItem("coastapply.application.draft.v4");
     } catch {
