@@ -6,9 +6,10 @@ Public link applicants should use: **https://coastapply.com**
 
 1. Open https://railway.app/new  
 2. **Deploy from GitHub repo** → `sammyscottreid44-prog/CoastalProperties`  
-3. Use branch `cursor/application-portal-bf3c` (or `main` once merged)  
-4. Railway will build with `railway.toml` (`npm run build` → `npm start`)  
-5. In the service → **Variables**, set:
+3. Use branch `cursor/application-portal-bf3c` (not `main`)  
+4. Railway builds with the repo `Dockerfile`  
+5. Root Directory must be empty / repo root (not `frontend` or `backend`)  
+6. In the service → **Variables**, set:
 
 ```text
 NODE_ENV=production

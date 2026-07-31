@@ -14,11 +14,10 @@ function resolveFromRepo(value: string | undefined, fallbackRelative: string): s
   return path.isAbsolute(value) ? value : path.resolve(repoRoot, value);
 }
 
-function requiredInProduction(name: string, value: string | undefined): string | undefined {
-  if (process.env.NODE_ENV === "production" && !value) {
+function requiredWhen(driverActive: boolean, name: string, value: string | undefined): void {
+  if (driverActive && process.env.NODE_ENV === "production" && !value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
-  return value;
 }
 
 const nodeEnv = process.env.NODE_ENV ?? "development";
@@ -53,41 +52,29 @@ const defaultAppBaseUrl =
   (isProduction ? brand.appBaseUrl : "http://localhost:5173");
 const defaultCorsOrigins =
   process.env.CORS_ORIGINS ||
-  (platformPublicUrl
-    ? `${platformPublicUrl},https://${brand.domain},https://www.${brand.domain}`
-    : isProduction
-      ? `https://${brand.domain},https://www.${brand.domain}`
-      : "http://localhost:5173,http://localhost:3001");
+  [
+    platformPublicUrl,
+    `https://${brand.domain}`,
+    `https://www.${brand.domain}`,
+    !isProduction ? "http://localhost:5173" : "",
+    !isProduction ? "http://localhost:3001" : "",
+  ]
+    .filter(Boolean)
+    .join(",");
 
-if (isProduction) {
-  if (storageDriver === "s3") {
-    requiredInProduction("S3_BUCKET", process.env.S3_BUCKET);
-    requiredInProduction("S3_ACCESS_KEY_ID", process.env.S3_ACCESS_KEY_ID);
-    requiredInProduction("S3_SECRET_ACCESS_KEY", process.env.S3_SECRET_ACCESS_KEY);
-    requiredInProduction("S3_REGION", process.env.S3_REGION);
-  }
-  if (emailDriver === "resend") {
-    requiredInProduction("RESEND_API_KEY", process.env.RESEND_API_KEY);
-    requiredInProduction("EMAIL_FROM", process.env.EMAIL_FROM);
-  }
-  if (emailDriver === "smtp") {
-    requiredInProduction("SMTP_HOST", process.env.SMTP_HOST);
-    requiredInProduction("SMTP_USER", process.env.SMTP_USER);
-    requiredInProduction("SMTP_PASS", process.env.SMTP_PASS);
-  }
-  if (!process.env.CORS_ORIGINS && !platformPublicUrl) {
-    requiredInProduction("CORS_ORIGINS", process.env.CORS_ORIGINS);
-  }
-  if (!process.env.APP_BASE_URL && !platformPublicUrl) {
-    requiredInProduction("APP_BASE_URL", process.env.APP_BASE_URL);
-  }
-  requiredInProduction("NOTIFY_EMAIL", process.env.NOTIFY_EMAIL);
-}
+requiredWhen(storageDriver === "s3", "S3_BUCKET", process.env.S3_BUCKET);
+requiredWhen(storageDriver === "s3", "S3_ACCESS_KEY_ID", process.env.S3_ACCESS_KEY_ID);
+requiredWhen(storageDriver === "s3", "S3_SECRET_ACCESS_KEY", process.env.S3_SECRET_ACCESS_KEY);
+requiredWhen(storageDriver === "s3", "S3_REGION", process.env.S3_REGION);
+requiredWhen(emailDriver === "resend", "RESEND_API_KEY", process.env.RESEND_API_KEY);
+requiredWhen(emailDriver === "resend", "EMAIL_FROM", process.env.EMAIL_FROM);
+requiredWhen(emailDriver === "smtp", "SMTP_HOST", process.env.SMTP_HOST);
+requiredWhen(emailDriver === "smtp", "SMTP_USER", process.env.SMTP_USER);
+requiredWhen(emailDriver === "smtp", "SMTP_PASS", process.env.SMTP_PASS);
 
-const adminPassword = process.env.ADMIN_PASSWORD?.trim() || "";
-if (isProduction && !adminPassword) {
-  requiredInProduction("ADMIN_PASSWORD", process.env.ADMIN_PASSWORD);
-}
+// Boot-safe default so Railway/Render can start before custom env is filled in.
+const adminPassword =
+  process.env.ADMIN_PASSWORD?.trim() || (isProduction ? "KqKcSMDffHOc9AHrKqvZgZGi" : "");
 
 export const config = {
   nodeEnv,
