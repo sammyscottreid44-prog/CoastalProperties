@@ -107,7 +107,7 @@ export const applicationPayloadSchema = z.object({
     .array(
       z.object({
         email: emailSchema,
-        status: z.enum(["queued", "sent", "failed"]).optional(),
+          status: z.enum(["queued", "sent", "failed", "link_ready"]).optional(),
       }),
     )
     .max(5)

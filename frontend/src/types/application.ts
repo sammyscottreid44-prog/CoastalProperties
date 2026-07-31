@@ -1,9 +1,10 @@
-export type InviteStatus = "queued" | "sent" | "failed";
+export type InviteStatus = "queued" | "sent" | "failed" | "link_ready";
 
 export type CoApplicant = {
   email: string;
   status: InviteStatus;
   message?: string;
+  invite_url?: string;
 };
 
 export type MedicareColour = "green" | "blue" | "yellow" | "";

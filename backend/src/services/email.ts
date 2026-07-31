@@ -7,6 +7,9 @@ export type EmailResult = {
   success: boolean;
   id?: string;
   error?: string;
+  /** true only when a real provider accepted the message */
+  delivered: boolean;
+  inviteUrl?: string;
 };
 
 async function sendViaResend(params: {
@@ -15,6 +18,14 @@ async function sendViaResend(params: {
   html: string;
   text: string;
 }): Promise<EmailResult> {
+  if (!config.email.resendApiKey) {
+    return {
+      success: false,
+      delivered: false,
+      error: "RESEND_API_KEY is not configured",
+    };
+  }
+
   const resend = new Resend(config.email.resendApiKey);
   const { data, error } = await resend.emails.send({
     from: config.email.from,
@@ -26,10 +37,10 @@ async function sendViaResend(params: {
 
   if (error) {
     logger.error("email_send_failed", { to: params.to, error: error.message });
-    return { success: false, error: error.message };
+    return { success: false, delivered: false, error: error.message };
   }
 
-  return { success: true, id: data?.id };
+  return { success: true, delivered: true, id: data?.id };
 }
 
 async function sendViaConsole(params: {
@@ -43,7 +54,14 @@ async function sendViaConsole(params: {
     subject: params.subject,
     text: params.text,
   });
-  return { success: true, id: `console-${Date.now()}` };
+  // Console mode does not deliver to an inbox — mark undelivered so UI can show the link.
+  return {
+    success: false,
+    delivered: false,
+    id: `console-${Date.now()}`,
+    error:
+      "Email is in console mode (EMAIL_DRIVER=console). Set EMAIL_DRIVER=resend and RESEND_API_KEY to deliver real emails.",
+  };
 }
 
 async function deliver(params: {
@@ -63,17 +81,26 @@ async function deliver(params: {
           ? await sendViaResend(params)
           : await sendViaConsole(params);
 
-      if (result.success) {
+      if (result.delivered) {
         return result;
       }
       lastError = result.error ?? lastError;
+      // Console mode will never succeed — don't retry
+      if (config.emailDriver === "console") {
+        return result;
+      }
     } catch (err) {
       lastError = err instanceof Error ? err.message : "Email delivery failed";
       logger.warn("email_retry", { attempt: i + 1, error: lastError });
     }
   }
 
-  return { success: false, error: lastError };
+  return { success: false, delivered: false, error: lastError };
+}
+
+export function buildInviteUrl(appBaseUrl: string, applicationGroup: string): string {
+  const base = appBaseUrl.replace(/\/$/, "");
+  return `${base}/?invite=${encodeURIComponent(applicationGroup)}`;
 }
 
 export async function sendInviteEmail(params: {
@@ -81,8 +108,9 @@ export async function sendInviteEmail(params: {
   inviterName: string;
   inviterEmail: string;
   applicationGroup: string;
+  appBaseUrl: string;
 }): Promise<EmailResult> {
-  const inviteUrl = `${config.appBaseUrl}/?invite=${encodeURIComponent(params.applicationGroup)}`;
+  const inviteUrl = buildInviteUrl(params.appBaseUrl, params.applicationGroup);
   const subject = `${params.inviterName} invited you to a ${brand.productName} application`;
   const text = [
     `${params.inviterName} (${params.inviterEmail}) invited you to join a ${brand.legalName} application (${params.applicationGroup}).`,
@@ -95,10 +123,12 @@ export async function sendInviteEmail(params: {
       <p>Application reference: <code>${params.applicationGroup}</code></p>
       <p>ABN ${brand.abn}</p>
       <p><a href="${inviteUrl}" style="background:#1a6b5c;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px;">Open application</a></p>
+      <p style="margin-top:16px;font-size:12px;color:#44555f;">Or paste this link: ${inviteUrl}</p>
     </div>
   `;
 
-  return deliver({ to: params.inviteeEmail, subject, html, text });
+  const result = await deliver({ to: params.inviteeEmail, subject, html, text });
+  return { ...result, inviteUrl };
 }
 
 export async function sendSubmissionNotification(params: {
@@ -106,6 +136,7 @@ export async function sendSubmissionNotification(params: {
   applicantName: string;
   applicantEmail: string;
   applicationGroup: string;
+  appBaseUrl: string;
 }): Promise<EmailResult> {
   const subject = `New ${brand.productName} submission ${params.submissionId}`;
   const text = [
@@ -113,6 +144,7 @@ export async function sendSubmissionNotification(params: {
     `Submission ID: ${params.submissionId}`,
     `Applicant: ${params.applicantName} <${params.applicantEmail}>`,
     `Application group: ${params.applicationGroup}`,
+    `Portal: ${params.appBaseUrl}`,
   ].join("\n");
   const html = `
     <div style="font-family: Georgia, serif; color: #0f1c24;">
@@ -121,8 +153,39 @@ export async function sendSubmissionNotification(params: {
       <p><strong>Submission ID:</strong> ${params.submissionId}</p>
       <p><strong>Applicant:</strong> ${params.applicantName} (${params.applicantEmail})</p>
       <p><strong>Group:</strong> ${params.applicationGroup}</p>
+      <p><a href="${params.appBaseUrl}">Open CoastApply</a></p>
     </div>
   `;
 
   return deliver({ to: config.email.notifyTo, subject, html, text });
+}
+
+export async function sendApplicantConfirmation(params: {
+  submissionId: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicationGroup: string;
+}): Promise<EmailResult> {
+  const subject = `We received your ${brand.productName} application`;
+  const text = [
+    `Hi ${params.applicantName},`,
+    ``,
+    `Thanks — ${brand.legalName} has received your application.`,
+    `Submission ID: ${params.submissionId}`,
+    `Reference: ${params.applicationGroup}`,
+    ``,
+    `We will be in touch if anything further is needed.`,
+  ].join("\n");
+  const html = `
+    <div style="font-family: Georgia, serif; color: #0f1c24;">
+      <h1 style="font-size: 22px;">Application received</h1>
+      <p>Hi ${params.applicantName},</p>
+      <p>Thanks — <strong>${brand.legalName}</strong> has received your application.</p>
+      <p><strong>Submission ID:</strong> ${params.submissionId}</p>
+      <p><strong>Reference:</strong> ${params.applicationGroup}</p>
+      <p>ABN ${brand.abn}</p>
+    </div>
+  `;
+
+  return deliver({ to: params.applicantEmail, subject, html, text });
 }

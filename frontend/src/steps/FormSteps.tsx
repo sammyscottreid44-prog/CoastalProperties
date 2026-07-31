@@ -660,8 +660,9 @@ export function InviteStep({ form, setForm }: Common) {
       const next = [...f.co_applicants];
       next[index] = {
         ...next[index],
-        status: result.success ? "sent" : "failed",
+        status: result.email_delivered ? "sent" : result.invite_url ? "link_ready" : "failed",
         message: result.message || result.error,
+        invite_url: result.invite_url,
       };
       return { ...f, co_applicants: next };
     });
@@ -677,7 +678,8 @@ export function InviteStep({ form, setForm }: Common) {
   return (
     <div className="stack">
       <p className="muted">
-        Optionally invite co-applicants. Invites are sent immediately and status is tracked below.
+        Invite co-applicants by email. If email delivery is unavailable, copy the invite link and
+        share it directly.
       </p>
       {form.co_applicants.map((c, index) => (
         <div className="invite-row" key={`invite-${index}`}>
@@ -688,22 +690,37 @@ export function InviteStep({ form, setForm }: Common) {
               onChange={(e) =>
                 setForm((f) => {
                   const next = [...f.co_applicants];
-                  next[index] = { ...next[index], email: e.target.value };
+                  next[index] = { ...next[index], email: e.target.value, invite_url: undefined };
                   return { ...f, co_applicants: next };
                 })
               }
             />
           </Field>
           <div className="invite-actions">
-            <span className={`status-pill status-${c.status}`}>{c.status}</span>
+            <span className={`status-pill status-${c.status}`}>
+              {c.status === "sent"
+                ? "email sent"
+                : c.status === "link_ready"
+                  ? "link ready"
+                  : c.status}
+            </span>
             <button
               type="button"
               className="btn ghost"
               disabled={!c.email.includes("@") || c.status === "sent"}
               onClick={() => void inviteOne(c.email, index)}
             >
-              Send invite
+              {c.invite_url ? "Resend invite" : "Send invite"}
             </button>
+            {c.invite_url ? (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => void navigator.clipboard.writeText(c.invite_url ?? "")}
+              >
+                Copy invite link
+              </button>
+            ) : null}
             <button
               type="button"
               className="linkish"
@@ -717,6 +734,13 @@ export function InviteStep({ form, setForm }: Common) {
               Remove
             </button>
           </div>
+          {c.invite_url ? (
+            <p className="invite-link">
+              <a href={c.invite_url} target="_blank" rel="noreferrer">
+                {c.invite_url}
+              </a>
+            </p>
+          ) : null}
           {c.message ? <p className="muted">{c.message}</p> : null}
         </div>
       ))}

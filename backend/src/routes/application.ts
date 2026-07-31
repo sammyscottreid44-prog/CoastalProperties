@@ -3,11 +3,16 @@ import { v4 as uuidv4 } from "uuid";
 import { config } from "../config.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { upload } from "../middleware/upload.js";
-import { sendInviteEmail, sendSubmissionNotification } from "../services/email.js";
+import {
+  sendApplicantConfirmation,
+  sendInviteEmail,
+  sendSubmissionNotification,
+} from "../services/email.js";
 import { generateSummaryPdf } from "../services/pdf.js";
 import { storeFile, type StoredFile } from "../services/storage.js";
 import { persistSubmissionMetadata } from "../services/submissions.js";
 import { logger } from "../utils/logger.js";
+import { resolvePublicBaseUrl } from "../utils/requestUrl.js";
 import {
   applicationPayloadSchema,
   invitePayloadSchema,
@@ -126,9 +131,18 @@ applicationRouter.post(
 
       await persistSubmissionMetadata(record);
 
+      const appBaseUrl = resolvePublicBaseUrl(req);
+      const applicantName = `${payload.applicant.first_name} ${payload.applicant.last_name}`;
       const notify = await sendSubmissionNotification({
         submissionId,
-        applicantName: `${payload.applicant.first_name} ${payload.applicant.last_name}`,
+        applicantName,
+        applicantEmail: payload.applicant.email,
+        applicationGroup: payload.application_group,
+        appBaseUrl,
+      });
+      const applicantMail = await sendApplicantConfirmation({
+        submissionId,
+        applicantName,
         applicantEmail: payload.applicant.email,
         applicationGroup: payload.application_group,
       });
@@ -137,15 +151,15 @@ applicationRouter.post(
         submission_id: submissionId,
         application_group: payload.application_group,
         file_count: storedFiles.length + 1,
-        notify_success: notify.success,
+        notify_delivered: notify.delivered,
+        applicant_mail_delivered: applicantMail.delivered,
       });
 
       return res.status(201).json({
         success: true,
-        message: notify.success
-          ? "Application submitted successfully"
-          : "Application submitted; notification email could not be delivered",
+        message: "Application submitted successfully",
         submission_id: submissionId,
+        email_delivered: notify.delivered && applicantMail.delivered,
         files: [...storedFiles, summaryPdf].map((f) => ({
           key: f.key,
           originalName: f.originalName,
@@ -169,33 +183,33 @@ applicationRouter.post("/invite", async (req, res, next) => {
           : req.body;
 
     const invite = invitePayloadSchema.parse(body);
+    const appBaseUrl = resolvePublicBaseUrl(req);
     const result = await sendInviteEmail({
       inviteeEmail: invite.invitee_email,
       inviterName: invite.inviter_name,
       inviterEmail: invite.inviter_email,
       applicationGroup: invite.application_group,
+      appBaseUrl,
     });
 
     logger.audit("application_invite", {
       application_group: invite.application_group,
       invitee_email: invite.invitee_email,
-      success: result.success,
+      delivered: result.delivered,
       email_id: result.id,
+      invite_url: result.inviteUrl,
     });
-
-    if (!result.success) {
-      return res.status(502).json({
-        success: false,
-        message: "Invite email failed to send",
-        error: result.error,
-      });
-    }
 
     return res.status(200).json({
       success: true,
-      message: "Invite sent successfully",
+      message: result.delivered
+        ? "Invite email sent successfully"
+        : "Invite link ready — email was not delivered. Copy the link and share it.",
       email_id: result.id,
-      status: "sent",
+      email_delivered: result.delivered,
+      invite_url: result.inviteUrl,
+      status: result.delivered ? "sent" : "failed",
+      error: result.delivered ? undefined : result.error,
     });
   } catch (err) {
     return next(err);

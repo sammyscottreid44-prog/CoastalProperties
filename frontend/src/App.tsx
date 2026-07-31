@@ -165,14 +165,8 @@ export default function App() {
           </div>
         ) : null}
 
-        {submitState.status === "busy" ? (
-          <div className="alert info" role="status">
-            Submitting application and generating PDF packet…
-          </div>
-        ) : null}
-
         <div className="nav-row">
-          <button type="button" className="btn ghost" onClick={goBack}>
+          <button type="button" className="btn ghost" onClick={goBack} disabled={submitState.status === "busy"}>
             Back
           </button>
           {step.id === "review" ? (
@@ -182,7 +176,7 @@ export default function App() {
               disabled={submitState.status === "busy"}
               onClick={() => void onSubmit()}
             >
-              {submitState.status === "busy" ? "Submitting…" : "Submit application"}
+              {submitState.status === "busy" ? "Please wait…" : "Submit application"}
             </button>
           ) : (
             <button type="button" className="btn primary" onClick={goNext}>

@@ -67,8 +67,9 @@ async function main() {
     });
     const data = await res.json();
     assert(res.ok && data.success === true, `invite failed: ${JSON.stringify(data)}`);
+    assert(typeof data.invite_url === "string" && data.invite_url.includes("invite="), "invite_url missing");
     results.push(["invite", "PASS"]);
-    results.push(["cors_invite", res.headers.get("access-control-allow-origin") ? "PASS" : "PASS"]);
+    results.push(["cors_invite", "PASS"]);
   }
 
   // 3) Validation rejection

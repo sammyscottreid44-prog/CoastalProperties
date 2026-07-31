@@ -14,6 +14,8 @@ export type InviteResult = {
   message: string;
   status?: string;
   error?: string;
+  invite_url?: string;
+  email_delivered?: boolean;
 };
 
 function buildPayload(form: ApplicationForm) {
