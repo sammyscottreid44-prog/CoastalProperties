@@ -4,11 +4,11 @@
 
 **https://coastapply.com/admin**
 
-(Also works on your Render URL, e.g. `https://coastapply.onrender.com/admin`, before DNS finishes.)
+(Also works on your Railway URL, e.g. `https://….up.railway.app/admin`, before DNS finishes.)
 
 ## Password
 
-Set in the host environment (`ADMIN_PASSWORD` on Render):
+Set in the host environment (`ADMIN_PASSWORD` on Railway):
 
 ```bash
 ADMIN_PASSWORD=your-long-random-password

@@ -16,7 +16,7 @@ Applicants complete a multi-step form, upload supporting documents, invite co-ap
 | Backend | Node.js + Express |
 | Storage | S3-compatible (`STORAGE_DRIVER=s3`) or local disk for development |
 | Email | Resend (`EMAIL_DRIVER=resend`) or console logging for development |
-| Hosting | Render (Node process) at **coastapply.com** |
+| Hosting | Railway (Node process) at **coastapply.com** |
 
 ## Repository layout
 
@@ -115,21 +115,13 @@ Liveness + active storage/email drivers.
 
 Public applicants should only ever see **coastapply.com**.
 
-1. **Deploy the app on Render** (GitHub login, no Vercel):  
-   https://render.com/deploy?repo=https://github.com/sammyscottreid44-prog/CoastalProperties
-2. **Point the domain** in Squarespace DNS (details in `docs/SQUARESPACE_DNS.md`):
+1. **Deploy on Railway:** https://railway.app/new → Deploy from GitHub → this repo  
+   Full steps + env vars: `docs/INSTANT_ACCESS.md`
+2. Confirm the Railway `*.up.railway.app` URL works (`/` and `/api/health`)
+3. **Attach the domain:** Railway Domains → add `coastapply.com` / `www` → paste those records into Squarespace DNS (`docs/SQUARESPACE_DNS.md`)
+4. Confirm https://coastapply.com
 
-| Type | Host | Data |
-| --- | --- | --- |
-| **A** | `@` | `216.24.57.1` |
-| **CNAME** | `www` | `coastapply.onrender.com` |
-
-(Use your real `*.onrender.com` hostname if Render names it differently. Delete the old Squarespace website A records first.)
-
-3. In Render → Custom Domains → add `coastapply.com` + `www.coastapply.com`.
-4. Confirm https://coastapply.com and https://coastapply.com/api/health.
-
-Optional later: set `RESEND_API_KEY` / S3 vars on Render for real email + durable file storage.
+Optional later: set `RESEND_API_KEY` / S3 vars on Railway for real email + durable file storage.
 
 ## Rollback
 
@@ -140,7 +132,7 @@ npm run build
 npm start
 ```
 
-Or in Render: Deployments → redeploy a previous successful deploy.
+Or in Railway: Deployments → redeploy a previous successful deploy.
 
 Confirm `/api/health` and a smoke submit against the rolled-back release.
 

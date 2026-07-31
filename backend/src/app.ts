@@ -34,6 +34,9 @@ function isOriginAllowed(origin: string, requestHost: string | undefined): boole
     if (url.hostname.endsWith(".onrender.com")) {
       return true;
     }
+    if (url.hostname.endsWith(".up.railway.app") || url.hostname.endsWith(".railway.app")) {
+      return true;
+    }
   } catch {
     return false;
   }

@@ -24,9 +24,8 @@ function requiredInProduction(name: string, value: string | undefined): string |
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
 
-const storageDriver = (process.env.STORAGE_DRIVER ?? (isProduction ? "s3" : "local")) as
-  | "s3"
-  | "local";
+const storageDriver = (process.env.STORAGE_DRIVER ??
+  (process.env.S3_BUCKET ? "s3" : "local")) as "s3" | "local";
 
 const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
 const hasSmtp = Boolean(
@@ -38,16 +37,24 @@ const hasSmtp = Boolean(
 const emailDriver = (process.env.EMAIL_DRIVER?.trim() ||
   (hasResend ? "resend" : hasSmtp ? "smtp" : "console")) as "resend" | "smtp" | "console";
 
-// Render injects RENDER_EXTERNAL_URL (e.g. https://coastapply.onrender.com)
+// Platform-injected public URLs (Railway / Render) when APP_BASE_URL is not set
+const railwayPublicDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.replace(/\/$/, "") || "";
+const railwayPublicUrl = railwayPublicDomain
+  ? railwayPublicDomain.startsWith("http")
+    ? railwayPublicDomain
+    : `https://${railwayPublicDomain}`
+  : "";
 const renderExternalUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "") || "";
+const platformPublicUrl = railwayPublicUrl || renderExternalUrl;
+
 const defaultAppBaseUrl =
   process.env.APP_BASE_URL ||
-  renderExternalUrl ||
+  platformPublicUrl ||
   (isProduction ? brand.appBaseUrl : "http://localhost:5173");
 const defaultCorsOrigins =
   process.env.CORS_ORIGINS ||
-  (renderExternalUrl
-    ? `${renderExternalUrl},https://${brand.domain},https://www.${brand.domain}`
+  (platformPublicUrl
+    ? `${platformPublicUrl},https://${brand.domain},https://www.${brand.domain}`
     : isProduction
       ? `https://${brand.domain},https://www.${brand.domain}`
       : "http://localhost:5173,http://localhost:3001");
@@ -68,10 +75,10 @@ if (isProduction) {
     requiredInProduction("SMTP_USER", process.env.SMTP_USER);
     requiredInProduction("SMTP_PASS", process.env.SMTP_PASS);
   }
-  if (!process.env.CORS_ORIGINS && !renderExternalUrl) {
+  if (!process.env.CORS_ORIGINS && !platformPublicUrl) {
     requiredInProduction("CORS_ORIGINS", process.env.CORS_ORIGINS);
   }
-  if (!process.env.APP_BASE_URL && !renderExternalUrl) {
+  if (!process.env.APP_BASE_URL && !platformPublicUrl) {
     requiredInProduction("APP_BASE_URL", process.env.APP_BASE_URL);
   }
   requiredInProduction("NOTIFY_EMAIL", process.env.NOTIFY_EMAIL);

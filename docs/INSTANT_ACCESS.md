@@ -1,12 +1,43 @@
-# Go live on coastapply.com
+# Go live on coastapply.com (Railway)
 
-Trustworthy public link: **https://coastapply.com**
+Public link applicants should use: **https://coastapply.com**
 
-## Do this
+## 1) Deploy on Railway
 
-1. **Deploy:** https://render.com/deploy?repo=https://github.com/sammyscottreid44-prog/CoastalProperties  
-   (GitHub login → Blueprint → set `ADMIN_PASSWORD` → Deploy)
-2. **DNS:** follow `docs/SQUARESPACE_DNS.md`  
-   (Squarespace: A `@` → `216.24.57.1`, CNAME `www` → your `*.onrender.com`)
+1. Open https://railway.app/new  
+2. **Deploy from GitHub repo** → `sammyscottreid44-prog/CoastalProperties`  
+3. Use branch `cursor/application-portal-bf3c` (or `main` once merged)  
+4. Railway will build with `railway.toml` (`npm run build` → `npm start`)  
+5. In the service → **Variables**, set:
 
-That’s it. No Vercel. No temporary tunnel URL for applicants.
+```text
+NODE_ENV=production
+APP_BASE_URL=https://coastapply.com
+CORS_ORIGINS=https://coastapply.com,https://www.coastapply.com
+STORAGE_DRIVER=local
+LOCAL_UPLOAD_DIR=./uploads
+LOCAL_DATA_DIR=./data
+EMAIL_DRIVER=console
+EMAIL_FROM=CoastApply <applications@coastapply.com>
+NOTIFY_EMAIL=sammyscottreid44@gmail.com
+ADMIN_PASSWORD=KqKcSMDffHOc9AHrKqvZgZGi
+```
+
+6. Open the Railway-generated `*.up.railway.app` URL and confirm the form loads + `/api/health` works.
+
+## 2) Attach coastapply.com
+
+1. Railway service → **Settings → Networking / Domains** → **Custom Domain**  
+2. Add `coastapply.com` and `www.coastapply.com`  
+3. Copy the DNS records Railway shows  
+4. In Squarespace → Domains → coastapply.com → DNS:
+   - Delete old Squarespace website A records (`198.*`)
+   - Turn off domain forwarding / www redirects
+   - Add exactly what Railway shows (usually CNAME for `www`, and A/ALIAS for `@`)
+5. Wait until Railway marks the domain as ready
+
+## 3) Confirm
+
+- https://coastapply.com  
+- https://coastapply.com/api/health  
+- https://coastapply.com/admin (password above)

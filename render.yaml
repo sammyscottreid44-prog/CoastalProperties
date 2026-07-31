@@ -1,5 +1,5 @@
-# Deploy: https://render.com/deploy?repo=https://github.com/sammyscottreid44-prog/CoastalProperties
-# Then point coastapply.com DNS at this service (see docs/SQUARESPACE_DNS.md).
+# DEPRECATED — use Railway instead (see docs/INSTANT_ACCESS.md).
+# Left in place only as a leftover; do not use for go-live.
 services:
   - type: web
     name: coastapply
