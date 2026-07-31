@@ -77,6 +77,26 @@ body::before {
   font-size: 1.4rem;
 }
 
+.brand-legal {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
+.brand-legal.compact {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+}
+
+.abn-line {
+  margin: 1.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;

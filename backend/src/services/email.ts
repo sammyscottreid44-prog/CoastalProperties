@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { brand } from "../brand.js";
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
 
@@ -82,16 +83,17 @@ export async function sendInviteEmail(params: {
   applicationGroup: string;
 }): Promise<EmailResult> {
   const inviteUrl = `${config.appBaseUrl}/?invite=${encodeURIComponent(params.applicationGroup)}`;
-  const subject = `${params.inviterName} invited you to a Northline application`;
+  const subject = `${params.inviterName} invited you to a ${brand.productName} application`;
   const text = [
-    `${params.inviterName} (${params.inviterEmail}) invited you to join application ${params.applicationGroup}.`,
+    `${params.inviterName} (${params.inviterEmail}) invited you to join a ${brand.legalName} application (${params.applicationGroup}).`,
     `Open this link to continue: ${inviteUrl}`,
   ].join("\n");
   const html = `
     <div style="font-family: Georgia, serif; color: #0f1c24;">
-      <h1 style="font-size: 22px;">You're invited to a Northline application</h1>
-      <p><strong>${params.inviterName}</strong> (${params.inviterEmail}) asked you to join as a co-applicant.</p>
+      <h1 style="font-size: 22px;">You're invited to a ${brand.productName} application</h1>
+      <p><strong>${params.inviterName}</strong> (${params.inviterEmail}) asked you to join as a co-applicant for ${brand.legalName}.</p>
       <p>Application reference: <code>${params.applicationGroup}</code></p>
+      <p>ABN ${brand.abn}</p>
       <p><a href="${inviteUrl}" style="background:#1a6b5c;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px;">Open application</a></p>
     </div>
   `;
@@ -105,15 +107,17 @@ export async function sendSubmissionNotification(params: {
   applicantEmail: string;
   applicationGroup: string;
 }): Promise<EmailResult> {
-  const subject = `New Northline submission ${params.submissionId}`;
+  const subject = `New ${brand.productName} submission ${params.submissionId}`;
   const text = [
+    `${brand.legalName} (ABN ${brand.abn})`,
     `Submission ID: ${params.submissionId}`,
     `Applicant: ${params.applicantName} <${params.applicantEmail}>`,
     `Application group: ${params.applicationGroup}`,
   ].join("\n");
   const html = `
     <div style="font-family: Georgia, serif; color: #0f1c24;">
-      <h1 style="font-size: 22px;">New application submitted</h1>
+      <h1 style="font-size: 22px;">New ${brand.productName} application submitted</h1>
+      <p>${brand.legalName} · ABN ${brand.abn}</p>
       <p><strong>Submission ID:</strong> ${params.submissionId}</p>
       <p><strong>Applicant:</strong> ${params.applicantName} (${params.applicantEmail})</p>
       <p><strong>Group:</strong> ${params.applicationGroup}</p>

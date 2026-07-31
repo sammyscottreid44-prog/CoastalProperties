@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Field, TextInput, TextSelect, TextTextarea } from "../components/Field";
 import { FilePicker } from "../components/FilePicker";
 import { sendInvite } from "../lib/api";
+import { brand } from "../lib/brand";
 import type { ApplicationForm, CoApplicant } from "../types/application";
 
 type Common = {
@@ -432,7 +433,7 @@ export function InviteStep({ form, setForm }: Common) {
     const result = await sendInvite({
       invitee_email: email,
       inviter_name: `${form.applicant.first_name} ${form.applicant.last_name}`.trim() || "Applicant",
-      inviter_email: form.applicant.email || "unknown@example.com",
+      inviter_email: form.applicant.email || brand.contactEmail,
       application_group: form.application_group,
     });
 
@@ -579,7 +580,9 @@ export function ReviewStep({ form, setForm }: Common) {
           }
         />
         <span>
-          I declare that the information provided is true and complete to the best of my knowledge.
+          I declare that the information provided is true and complete to the best of my
+          knowledge, and I understand it will be used by {brand.legalName} (ABN {brand.abn})
+          for application assessment.
         </span>
       </label>
       <Field label="Type your full name as signature *">

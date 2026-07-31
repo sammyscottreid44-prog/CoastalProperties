@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { brand } from "../brand.js";
 import type { ApplicationPayload } from "../utils/validation.js";
 
 function section(doc: PDFKit.PDFDocument, title: string, rows: Array<[string, string]>) {
@@ -20,10 +21,11 @@ export async function generateSummaryPdf(payload: ApplicationPayload): Promise<B
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(20).fillColor("#0f1c24").text("Northline Application Summary");
+    doc.fontSize(20).fillColor("#0f1c24").text(`${brand.productName} Application Summary`);
     doc
       .fontSize(10)
       .fillColor("#44555f")
+      .text(`${brand.legalName} · ABN ${brand.abn}`)
       .text(`Application group: ${payload.application_group}`)
       .text(`Generated: ${new Date().toISOString()}`);
 

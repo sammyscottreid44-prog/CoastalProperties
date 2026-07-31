@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { brand } from "./brand.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -50,8 +51,13 @@ export const config = {
   nodeEnv,
   isProduction,
   port: Number(process.env.PORT ?? 3001),
-  appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:5173",
-  corsOrigins: (process.env.CORS_ORIGINS ?? "http://localhost:5173")
+  appBaseUrl: process.env.APP_BASE_URL ?? (isProduction ? brand.appBaseUrl : "http://localhost:5173"),
+  corsOrigins: (
+    process.env.CORS_ORIGINS ??
+    (isProduction
+      ? `https://${brand.domain},https://www.${brand.domain}`
+      : "http://localhost:5173")
+  )
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
@@ -69,8 +75,8 @@ export const config = {
   },
   email: {
     resendApiKey: process.env.RESEND_API_KEY ?? "",
-    from: process.env.EMAIL_FROM ?? "Northline Applications <onboarding@resend.dev>",
-    notifyTo: process.env.NOTIFY_EMAIL ?? "applications@example.com",
+    from: process.env.EMAIL_FROM ?? brand.emailFromDefault,
+    notifyTo: process.env.NOTIFY_EMAIL ?? brand.contactEmail,
   },
   limits: {
     maxFileBytes: Number(process.env.MAX_FILE_BYTES ?? 10 * 1024 * 1024),

@@ -1,8 +1,8 @@
 {
-  "name": "northline-application-portal",
+  "name": "coastapply-application-portal",
   "version": "1.0.0",
   "private": true,
-  "description": "Production-ready online application portal (clean-room rebuild)",
+  "description": "CoastApply — Coastal Commercial Property online application portal",
   "workspaces": [
     "backend",
     "frontend"

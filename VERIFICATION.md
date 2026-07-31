@@ -1,5 +1,6 @@
 # Acceptance Criteria Verification
 
+**Brand:** CoastApply · Coastal Commercial Property · ABN 39 101 817 798 · coastapply.com  
 Verified against `CLEANROOM_SPEC.md` on 2026-07-31.
 
 | # | Acceptance criterion | Result | Evidence |

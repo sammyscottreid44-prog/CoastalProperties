@@ -1,6 +1,10 @@
-# Northline Application Portal
+# CoastApply — Coastal Commercial Property
 
 Clean-room, production-ready online application portal built from `CLEANROOM_SPEC.md`.
+
+**Operator:** Coastal Commercial Property · **ABN** 39 101 817 798  
+**Domain:** [coastapply.com](https://coastapply.com)  
+**Notifications:** sammyscottreid44@gmail.com
 
 Applicants complete a multi-step form, upload supporting documents, invite co-applicants, and submit a validated application. The API stores files (local or S3-compatible), generates a PDF summary packet, and sends transactional email via Resend.
 
@@ -28,7 +32,7 @@ scripts/      Smoke tests
 
 - Node.js 20+
 - npm 10+
-- For production: S3-compatible bucket credentials + Resend API key + verified sending domain
+- For production: S3-compatible bucket credentials + Resend API key + verified sending domain (`coastapply.com`)
 
 ## Local setup
 
@@ -46,14 +50,13 @@ Default local drivers (from `.env.example`):
 
 - `STORAGE_DRIVER=local` → files under `./uploads`, metadata under `./data`
 - `EMAIL_DRIVER=console` → invite/notification emails logged to stdout
+- `NOTIFY_EMAIL=sammyscottreid44@gmail.com`
 
 ### Production-like local run (built assets, single process)
 
 ```bash
 cp .env.example .env
 # edit .env with real S3 + Resend values, then:
-export NODE_ENV=production
-# or keep development and set STORAGE_DRIVER=s3 / EMAIL_DRIVER=resend
 npm install
 npm run build
 npm start
@@ -65,13 +68,13 @@ Open http://localhost:3001
 
 See `.env.example` for the full list. Production (`NODE_ENV=production`) **requires** real values for:
 
-- `CORS_ORIGINS`
-- `APP_BASE_URL`
-- `NOTIFY_EMAIL`
+- `CORS_ORIGINS` (e.g. `https://coastapply.com,https://www.coastapply.com`)
+- `APP_BASE_URL` (e.g. `https://coastapply.com`)
+- `NOTIFY_EMAIL` (default operator inbox: `sammyscottreid44@gmail.com`)
 - When `STORAGE_DRIVER=s3`: `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
-- When `EMAIL_DRIVER=resend`: `RESEND_API_KEY`, `EMAIL_FROM`
+- When `EMAIL_DRIVER=resend`: `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `CoastApply <applications@coastapply.com>`)
 
-There are no unresolved placeholder credentials in production config: missing required vars fail fast at startup.
+Missing required vars fail fast at startup.
 
 ## API
 
@@ -108,16 +111,18 @@ There are no unresolved placeholder credentials in production config: missing re
 
 Liveness + active storage/email drivers.
 
-## Deploy to Vercel
+## Deploy to Vercel (coastapply.com)
 
 1. Create a Vercel project from this repository.
 2. Set **Root Directory** to the repo root.
-3. Configure environment variables in the Vercel dashboard (use production values from `.env.example`):
+3. Point the custom domain `coastapply.com` (and optionally `www`) at the project.
+4. In Resend, verify `coastapply.com` and use a from-address on that domain.
+5. Configure environment variables:
 
 ```text
 NODE_ENV=production
-APP_BASE_URL=https://your-app.vercel.app
-CORS_ORIGINS=https://your-app.vercel.app
+APP_BASE_URL=https://coastapply.com
+CORS_ORIGINS=https://coastapply.com,https://www.coastapply.com
 STORAGE_DRIVER=s3
 S3_BUCKET=...
 S3_REGION=...
@@ -127,17 +132,15 @@ S3_ENDPOINT=                 # optional for R2/MinIO
 S3_FORCE_PATH_STYLE=false
 EMAIL_DRIVER=resend
 RESEND_API_KEY=...
-EMAIL_FROM=Northline Applications <applications@your-domain.com>
-NOTIFY_EMAIL=operations@your-domain.com
+EMAIL_FROM=CoastApply <applications@coastapply.com>
+NOTIFY_EMAIL=sammyscottreid44@gmail.com
 ```
 
-4. Deploy:
+6. Deploy:
 
 ```bash
 npx vercel --prod
 ```
-
-Or connect the GitHub repo and deploy via the Vercel Git integration.
 
 ### Exact go-live command sequence
 
@@ -148,12 +151,11 @@ npm install
 npm run build
 npm run smoke          # against a running local server first
 npx vercel link        # once
-npx vercel env pull    # optional sync check
 npx vercel --prod
-SMOKE_API_BASE=https://your-app.vercel.app npm run smoke
+SMOKE_API_BASE=https://coastapply.com npm run smoke
 ```
 
-> Note: Vercel serverless has request body size limits. For large document packets, run the Express server as a long-lived Node process (container/VM) pointed at the same env vars, and host the frontend on Vercel with `VITE_API_BASE_URL` set to that API origin (include that origin’s frontend URL in `CORS_ORIGINS`).
+> Note: Vercel serverless has request body size limits. For large document packets, run the Express server as a long-lived Node process (container/VM) pointed at the same env vars, and host the frontend on Vercel with `VITE_API_BASE_URL` set to that API origin (include `https://coastapply.com` in `CORS_ORIGINS`).
 
 ## Rollback
 
@@ -168,9 +170,6 @@ Or in the Vercel UI: Project → Deployments → ⋮ on a previous production de
 
 ### Node single-process host
 
-1. Keep the previous release artifact/image.
-2. Redeploy the last known-good commit/tag:
-
 ```bash
 git checkout <previous-git-sha>
 npm install
@@ -178,24 +177,17 @@ npm run build
 npm start
 ```
 
-3. Confirm `/api/health` and a smoke submit against the rolled-back release.
+Confirm `/api/health` and a smoke submit against the rolled-back release.
 
 ## Smoke tests
-
-Start the API (or full stack), then:
 
 ```bash
 npm run smoke
 # or
-SMOKE_API_BASE=http://localhost:3001 npm run smoke
+SMOKE_API_BASE=https://coastapply.com npm run smoke
 ```
 
-Checks:
-
-1. Health endpoint
-2. Invite send
-3. Submit validation rejection
-4. End-to-end submit with documents + PDF packet persistence
+Checks: health, invite send, submit validation rejection, end-to-end submit with documents + PDF packet.
 
 ## Security controls
 

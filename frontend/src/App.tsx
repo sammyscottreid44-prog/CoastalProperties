@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Progress } from "./components/Progress";
 import { useDraft } from "./hooks/useDraft";
 import { submitApplication } from "./lib/api";
+import { brand } from "./lib/brand";
 import { validateStep } from "./lib/validation";
 import { Landing } from "./steps/Landing";
 import {
@@ -69,7 +70,7 @@ export default function App() {
         submissionId: result.submission_id,
         message: result.message,
       });
-      localStorage.removeItem("northline.application.draft.v1");
+      localStorage.removeItem("coastapply.application.draft.v1");
     } catch {
       setSubmitState({
         status: "error",
@@ -102,13 +103,16 @@ export default function App() {
     return (
       <div className="shell">
         <header className="topbar">
-          <p className="brand-mark compact">Northline</p>
+          <p className="brand-mark compact">{brand.productName}</p>
         </header>
         <main className="panel success-panel">
           <h1>Application submitted</h1>
           <p>{submitState.message}</p>
           <p className="submission-id">
             Submission ID: <code>{submitState.submissionId}</code>
+          </p>
+          <p className="muted">
+            {brand.legalName} · ABN {brand.abn}
           </p>
           <button type="button" className="btn primary" onClick={startFresh}>
             Start another application
@@ -121,7 +125,10 @@ export default function App() {
   return (
     <div className="shell">
       <header className="topbar">
-        <p className="brand-mark compact">Northline</p>
+        <div>
+          <p className="brand-mark compact">{brand.productName}</p>
+          <p className="brand-legal compact">{brand.legalName}</p>
+        </div>
         <p className="topbar-meta">Ref {form.application_group.slice(0, 8)}</p>
       </header>
       <Progress current={stepIndex} />
