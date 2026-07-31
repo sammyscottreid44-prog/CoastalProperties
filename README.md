@@ -16,7 +16,7 @@ Applicants complete a multi-step form, upload supporting documents, invite co-ap
 | Backend | Node.js + Express |
 | Storage | S3-compatible (`STORAGE_DRIVER=s3`) or local disk for development |
 | Email | Resend (`EMAIL_DRIVER=resend`) or console logging for development |
-| Hosting | Vercel (serverless API + static frontend) or single Node process |
+| Hosting | Render (Node process) at **coastapply.com** |
 
 ## Repository layout
 
@@ -111,84 +111,27 @@ Missing required vars fail fast at startup.
 
 Liveness + active storage/email drivers.
 
-## Domain on Squarespace + app on Vercel
+## Go live: https://coastapply.com
 
-Squarespace can own/register `coastapply.com` and manage DNS. It **cannot** host this Node.js + React application portal (APIs, uploads, PDF, email). Keep the domain at Squarespace; run the app on Vercel; point Squarespace DNS at Vercel.
+Public applicants should only ever see **coastapply.com**.
 
-Your current Squarespace website A records (`198.185.159.*` / `198.49.23.*`) are for Squarespace’s website builder. Replace those website records with Vercel’s so `coastapply.com` serves CoastApply.
-
-### A) Squarespace DNS (you do this in Squarespace Domains)
-
-1. Log in → **Domains** → `coastapply.com` → **DNS settings** / **DNS records**.
-2. Remove or disable the Squarespace **website** A / CNAME records that point at Squarespace hosting (the `198.185.159.*` / `198.49.23.*` hints).
-3. Add:
+1. **Deploy the app on Render** (GitHub login, no Vercel):  
+   https://render.com/deploy?repo=https://github.com/sammyscottreid44-prog/CoastalProperties
+2. **Point the domain** in Squarespace DNS (details in `docs/SQUARESPACE_DNS.md`):
 
 | Type | Host | Data |
 | --- | --- | --- |
-| **A** | `@` | `76.76.21.21` |
-| **CNAME** | `www` | `cname.vercel-dns.com` |
+| **A** | `@` | `216.24.57.1` |
+| **CNAME** | `www` | `coastapply.onrender.com` |
 
-4. Leave any Squarespace **email** / Resend verification TXT / MX / DKIM records alone when you add them later.
-5. Save. Propagation is often minutes; can take up to 48 hours.
+(Use your real `*.onrender.com` hostname if Render names it differently. Delete the old Squarespace website A records first.)
 
-### B) Vercel app deploy
+3. In Render → Custom Domains → add `coastapply.com` + `www.coastapply.com`.
+4. Confirm https://coastapply.com and https://coastapply.com/api/health.
 
-1. Create a Vercel project from this GitHub repository (root directory = repo root).
-2. Project → **Settings → Domains** → add `coastapply.com` and `www.coastapply.com`.
-3. In Resend, verify `coastapply.com` (add the TXT/DKIM records Resend shows back into Squarespace DNS).
-4. Set Vercel environment variables:
-
-```text
-NODE_ENV=production
-APP_BASE_URL=https://coastapply.com
-CORS_ORIGINS=https://coastapply.com,https://www.coastapply.com
-STORAGE_DRIVER=s3
-S3_BUCKET=...
-S3_REGION=...
-S3_ACCESS_KEY_ID=...
-S3_SECRET_ACCESS_KEY=...
-S3_ENDPOINT=                 # optional for R2/MinIO
-S3_FORCE_PATH_STYLE=false
-EMAIL_DRIVER=resend
-RESEND_API_KEY=...
-EMAIL_FROM=CoastApply <applications@coastapply.com>
-NOTIFY_EMAIL=sammyscottreid44@gmail.com
-```
-
-5. Deploy:
-
-```bash
-npx vercel --prod
-```
-
-### Exact go-live command sequence
-
-```bash
-cp .env.example .env
-# Fill production secrets in Vercel project settings (never commit .env)
-npm install
-npm run build
-npm run smoke          # against a running local server first
-npx vercel link        # once
-npx vercel --prod
-# After Squarespace DNS + Vercel domain are connected:
-SMOKE_API_BASE=https://coastapply.com npm run smoke
-```
-
-> Note: Vercel serverless has request body size limits. For large document packets, run the Express server as a long-lived Node process (container/VM) pointed at the same env vars, and host the frontend on Vercel with `VITE_API_BASE_URL` set to that API origin (include `https://coastapply.com` in `CORS_ORIGINS`).
+Optional later: set `RESEND_API_KEY` / S3 vars on Render for real email + durable file storage.
 
 ## Rollback
-
-### Vercel
-
-```bash
-npx vercel ls
-npx vercel rollback <deployment-url>
-```
-
-Or in the Vercel UI: Project → Deployments → ⋮ on a previous production deployment → **Promote to Production**.
-
-### Node single-process host
 
 ```bash
 git checkout <previous-git-sha>
@@ -196,6 +139,8 @@ npm install
 npm run build
 npm start
 ```
+
+Or in Render: Deployments → redeploy a previous successful deploy.
 
 Confirm `/api/health` and a smoke submit against the rolled-back release.
 
@@ -243,4 +188,4 @@ Checks: health, invite send, submit validation rejection, end-to-end submit with
 | Summary PDF generated | Server `pdfkit` packet stored as `summary_pdf` |
 | Invite endpoint works | UI co-applicant step + smoke invite |
 | Success/error UI states | Busy/success/error panels in React app |
-| Reproducible deploy | This README + `.env.example` + `vercel.json` |
+| Reproducible deploy | This README + `.env.example` + `render.yaml` |

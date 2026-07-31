@@ -1,6 +1,5 @@
-# Persistent hosting without Squarespace/Vercel custom-domain auth.
-# Deploy: push this repo to GitHub → https://dashboard.render.com → New → Blueprint
-# You get an immediate https://*.onrender.com URL.
+# Deploy: https://render.com/deploy?repo=https://github.com/sammyscottreid44-prog/CoastalProperties
+# Then point coastapply.com DNS at this service (see docs/SQUARESPACE_DNS.md).
 services:
   - type: web
     name: coastapply
@@ -14,7 +13,10 @@ services:
         value: production
       - key: PORT
         value: 3001
-      # APP_BASE_URL / CORS_ORIGINS auto-derive from Render's RENDER_EXTERNAL_URL
+      - key: APP_BASE_URL
+        value: https://coastapply.com
+      - key: CORS_ORIGINS
+        value: https://coastapply.com,https://www.coastapply.com
       - key: STORAGE_DRIVER
         value: local
       - key: LOCAL_UPLOAD_DIR
@@ -22,10 +24,12 @@ services:
       - key: LOCAL_DATA_DIR
         value: ./data
       - key: EMAIL_DRIVER
-        value: resend
-      - key: RESEND_API_KEY
-        sync: false
+        value: console
       - key: EMAIL_FROM
-        value: CoastApply <onboarding@resend.dev>
+        value: CoastApply <applications@coastapply.com>
       - key: NOTIFY_EMAIL
         value: sammyscottreid44@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
