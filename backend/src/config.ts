@@ -1,0 +1,87 @@
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootEnv = path.resolve(__dirname, "../../.env");
+dotenv.config({ path: rootEnv });
+dotenv.config();
+
+function requiredInProduction(name: string, value: string | undefined): string | undefined {
+  if (process.env.NODE_ENV === "production" && !value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+const nodeEnv = process.env.NODE_ENV ?? "development";
+const isProduction = nodeEnv === "production";
+
+const storageDriver = (process.env.STORAGE_DRIVER ?? (isProduction ? "s3" : "local")) as
+  | "s3"
+  | "local";
+const emailDriver = (process.env.EMAIL_DRIVER ?? (isProduction ? "resend" : "console")) as
+  | "resend"
+  | "console";
+
+if (isProduction) {
+  if (storageDriver === "s3") {
+    requiredInProduction("S3_BUCKET", process.env.S3_BUCKET);
+    requiredInProduction("S3_ACCESS_KEY_ID", process.env.S3_ACCESS_KEY_ID);
+    requiredInProduction("S3_SECRET_ACCESS_KEY", process.env.S3_SECRET_ACCESS_KEY);
+    requiredInProduction("S3_REGION", process.env.S3_REGION);
+  }
+  if (emailDriver === "resend") {
+    requiredInProduction("RESEND_API_KEY", process.env.RESEND_API_KEY);
+    requiredInProduction("EMAIL_FROM", process.env.EMAIL_FROM);
+  }
+  requiredInProduction("CORS_ORIGINS", process.env.CORS_ORIGINS);
+  requiredInProduction("APP_BASE_URL", process.env.APP_BASE_URL);
+  requiredInProduction("NOTIFY_EMAIL", process.env.NOTIFY_EMAIL);
+}
+
+export const config = {
+  nodeEnv,
+  isProduction,
+  port: Number(process.env.PORT ?? 3001),
+  appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:5173",
+  corsOrigins: (process.env.CORS_ORIGINS ?? "http://localhost:5173")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  storageDriver,
+  emailDriver,
+  localUploadDir: process.env.LOCAL_UPLOAD_DIR
+    ? path.resolve(process.env.LOCAL_UPLOAD_DIR)
+    : path.resolve(__dirname, "../../uploads"),
+  localDataDir: process.env.LOCAL_DATA_DIR
+    ? path.resolve(process.env.LOCAL_DATA_DIR)
+    : path.resolve(__dirname, "../../data"),
+  s3: {
+    bucket: process.env.S3_BUCKET ?? "",
+    region: process.env.S3_REGION ?? "us-east-1",
+    endpoint: process.env.S3_ENDPOINT || undefined,
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+    accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
+  },
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY ?? "",
+    from: process.env.EMAIL_FROM ?? "Northline Applications <onboarding@resend.dev>",
+    notifyTo: process.env.NOTIFY_EMAIL ?? "applications@example.com",
+  },
+  limits: {
+    maxFileBytes: Number(process.env.MAX_FILE_BYTES ?? 10 * 1024 * 1024),
+    maxTotalUploadBytes: Number(process.env.MAX_TOTAL_UPLOAD_BYTES ?? 40 * 1024 * 1024),
+    maxFiles: Number(process.env.MAX_FILES ?? 12),
+    rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
+    rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 30),
+  },
+  allowedMimeTypes: [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
+} as const;

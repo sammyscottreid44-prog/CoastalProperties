@@ -1,0 +1,100 @@
+import PDFDocument from "pdfkit";
+import type { ApplicationPayload } from "../utils/validation.js";
+
+function section(doc: PDFKit.PDFDocument, title: string, rows: Array<[string, string]>) {
+  doc.moveDown(0.6);
+  doc.fontSize(13).fillColor("#1a6b5c").text(title, { underline: true });
+  doc.moveDown(0.3);
+  doc.fillColor("#0f1c24").fontSize(10);
+  for (const [label, value] of rows) {
+    doc.text(`${label}: ${value || "—"}`);
+  }
+}
+
+export async function generateSummaryPdf(payload: ApplicationPayload): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+    const chunks: Buffer[] = [];
+
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.fontSize(20).fillColor("#0f1c24").text("Northline Application Summary");
+    doc
+      .fontSize(10)
+      .fillColor("#44555f")
+      .text(`Application group: ${payload.application_group}`)
+      .text(`Generated: ${new Date().toISOString()}`);
+
+    section(doc, "Applicant Details", [
+      ["Name", `${payload.applicant.first_name} ${payload.applicant.last_name}`],
+      ["Email", payload.applicant.email],
+      ["Phone", payload.applicant.phone],
+      ["Date of birth", payload.applicant.date_of_birth],
+    ]);
+
+    section(doc, "Identity", [
+      ["ID type", payload.identity.id_type],
+      ["ID number", payload.identity.id_number],
+      ["Nationality", payload.identity.nationality],
+    ]);
+
+    section(doc, "Employment / Income", [
+      ["Status", payload.employment.status],
+      ["Employer", payload.employment.employer ?? ""],
+      ["Job title", payload.employment.job_title ?? ""],
+      ["Monthly income", payload.employment.monthly_income],
+      ["Start date", payload.employment.start_date ?? ""],
+    ]);
+
+    section(doc, "Address / Rental History", [
+      ["Current address", payload.address.current_address],
+      ["City", payload.address.city],
+      ["State", payload.address.state],
+      ["Postal code", payload.address.postal_code],
+      ["Years at address", payload.address.years_at_address],
+      ["Monthly rent", payload.address.monthly_rent],
+      ["Landlord", payload.address.landlord_name ?? ""],
+      ["Landlord phone", payload.address.landlord_phone ?? ""],
+      ["Previous address", payload.address.previous_address ?? ""],
+    ]);
+
+    section(doc, "Household", [
+      ["Household size", payload.household.household_size],
+      ["Dependents", payload.household.dependents],
+      ["Pets", payload.household.has_pets],
+      ["Pet details", payload.household.pet_details ?? ""],
+    ]);
+
+    section(doc, "References", [
+      [
+        "Reference 1",
+        `${payload.references.reference_1_name} / ${payload.references.reference_1_relationship} / ${payload.references.reference_1_phone} / ${payload.references.reference_1_email}`,
+      ],
+      [
+        "Reference 2",
+        `${payload.references.reference_2_name} / ${payload.references.reference_2_relationship} / ${payload.references.reference_2_phone} / ${payload.references.reference_2_email}`,
+      ],
+    ]);
+
+    section(doc, "Declaration", [
+      ["Accepted", payload.declaration.accepted ? "Yes" : "No"],
+      ["Signature", payload.declaration.signature_name],
+      ["Signed at", payload.declaration.signed_at],
+    ]);
+
+    if (payload.co_applicants?.length) {
+      section(
+        doc,
+        "Co-Applicants",
+        payload.co_applicants.map((c, i) => [
+          `Invite ${i + 1}`,
+          `${c.email}${c.status ? ` (${c.status})` : ""}`,
+        ]),
+      );
+    }
+
+    doc.end();
+  });
+}
