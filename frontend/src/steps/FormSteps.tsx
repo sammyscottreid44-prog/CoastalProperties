@@ -3,7 +3,6 @@ import { Field, TextInput, TextSelect, TextTextarea } from "../components/Field"
 import { FilePicker } from "../components/FilePicker";
 import { sendInvite } from "../lib/api";
 import { brand } from "../lib/brand";
-import { ID_POINTS, MIN_IDENTITY_POINTS, sumIdentityPoints } from "../lib/identityPoints";
 import type { ApplicationForm, CoApplicant, MedicareColour } from "../types/application";
 
 const PHOTO_ACCEPT = ".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf";
@@ -70,22 +69,13 @@ export function ApplicantStep({ form, setForm }: Common) {
 
 export function IdentityStep({ form, setForm }: Common) {
   const i = form.identity;
-  const points = sumIdentityPoints({
-    drivers_licence: i.drivers_licence.enabled,
-    passport: i.passport.enabled,
-    medicare: i.medicare.enabled,
-  });
 
   return (
     <div className="stack">
       <p className="muted">
-        Complete a 100-point identity check using passport ({ID_POINTS.passport} pts), Australian
-        driver licence ({ID_POINTS.drivers_licence} pts), and/or Medicare card ({ID_POINTS.medicare}{" "}
-        pts). Fill the details for each selected document and upload clear photos.
+        Provide details and clear photos for all three identification documents: Australian driver
+        licence (front and back), passport, and Medicare card.
       </p>
-      <div className={`points-banner ${points >= MIN_IDENTITY_POINTS ? "ok" : "short"}`}>
-        Current total: <strong>{points}</strong> / {MIN_IDENTITY_POINTS} points
-      </div>
 
       <Field label="Nationality *">
         <TextInput
@@ -97,304 +87,247 @@ export function IdentityStep({ form, setForm }: Common) {
       </Field>
 
       <div className="id-block">
-        <label className="declare">
-          <input
-            type="checkbox"
-            checked={i.drivers_licence.enabled}
-            onChange={(e) =>
+        <h3>Australian driver licence</h3>
+        <div className="stack nested">
+          <div className="grid two">
+            <Field label="Licence number *">
+              <TextInput
+                value={i.drivers_licence.number}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      drivers_licence: { ...f.identity.drivers_licence, number: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+            <Field label="State *">
+              <TextSelect
+                value={i.drivers_licence.state}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      drivers_licence: { ...f.identity.drivers_licence, state: e.target.value },
+                    },
+                  }))
+                }
+              >
+                <option value="">Select…</option>
+                {AU_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label="Expiry *">
+              <TextInput
+                type="date"
+                value={i.drivers_licence.expiry}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      drivers_licence: { ...f.identity.drivers_licence, expiry: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+          </div>
+          <FilePicker
+            label="Licence photo — front"
+            required
+            accept={PHOTO_ACCEPT}
+            files={i.drivers_licence.front ? [i.drivers_licence.front] : []}
+            onChange={(files) =>
               setForm((f) => ({
                 ...f,
                 identity: {
                   ...f.identity,
-                  drivers_licence: { ...f.identity.drivers_licence, enabled: e.target.checked },
+                  drivers_licence: { ...f.identity.drivers_licence, front: files[0] ?? null },
                 },
               }))
             }
           />
-          <span>
-            Australian driver licence — <strong>{ID_POINTS.drivers_licence} points</strong>
-          </span>
-        </label>
-        {i.drivers_licence.enabled ? (
-          <div className="stack nested">
-            <div className="grid two">
-              <Field label="Licence number *">
-                <TextInput
-                  value={i.drivers_licence.number}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        drivers_licence: { ...f.identity.drivers_licence, number: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="State *">
-                <TextSelect
-                  value={i.drivers_licence.state}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        drivers_licence: { ...f.identity.drivers_licence, state: e.target.value },
-                      },
-                    }))
-                  }
-                >
-                  <option value="">Select…</option>
-                  {AU_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </TextSelect>
-              </Field>
-              <Field label="Expiry *">
-                <TextInput
-                  type="date"
-                  value={i.drivers_licence.expiry}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        drivers_licence: { ...f.identity.drivers_licence, expiry: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-            </div>
-            <FilePicker
-              label="Licence photo — front"
-              required
-              accept={PHOTO_ACCEPT}
-              files={i.drivers_licence.front ? [i.drivers_licence.front] : []}
-              onChange={(files) =>
-                setForm((f) => ({
-                  ...f,
-                  identity: {
-                    ...f.identity,
-                    drivers_licence: { ...f.identity.drivers_licence, front: files[0] ?? null },
-                  },
-                }))
-              }
-            />
-            <FilePicker
-              label="Licence photo — back"
-              required
-              accept={PHOTO_ACCEPT}
-              files={i.drivers_licence.back ? [i.drivers_licence.back] : []}
-              onChange={(files) =>
-                setForm((f) => ({
-                  ...f,
-                  identity: {
-                    ...f.identity,
-                    drivers_licence: { ...f.identity.drivers_licence, back: files[0] ?? null },
-                  },
-                }))
-              }
-            />
-          </div>
-        ) : null}
+          <FilePicker
+            label="Licence photo — back"
+            required
+            accept={PHOTO_ACCEPT}
+            files={i.drivers_licence.back ? [i.drivers_licence.back] : []}
+            onChange={(files) =>
+              setForm((f) => ({
+                ...f,
+                identity: {
+                  ...f.identity,
+                  drivers_licence: { ...f.identity.drivers_licence, back: files[0] ?? null },
+                },
+              }))
+            }
+          />
+        </div>
       </div>
 
       <div className="id-block">
-        <label className="declare">
-          <input
-            type="checkbox"
-            checked={i.passport.enabled}
-            onChange={(e) =>
+        <h3>Passport</h3>
+        <div className="stack nested">
+          <div className="grid two">
+            <Field label="Passport number *">
+              <TextInput
+                value={i.passport.number}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      passport: { ...f.identity.passport, number: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+            <Field label="Country of issue *">
+              <TextInput
+                value={i.passport.country}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      passport: { ...f.identity.passport, country: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+            <Field label="Expiry *">
+              <TextInput
+                type="date"
+                value={i.passport.expiry}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      passport: { ...f.identity.passport, expiry: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+          </div>
+          <FilePicker
+            label="Passport photo page"
+            required
+            accept={PHOTO_ACCEPT}
+            files={i.passport.photo ? [i.passport.photo] : []}
+            onChange={(files) =>
               setForm((f) => ({
                 ...f,
                 identity: {
                   ...f.identity,
-                  passport: { ...f.identity.passport, enabled: e.target.checked },
+                  passport: { ...f.identity.passport, photo: files[0] ?? null },
                 },
               }))
             }
           />
-          <span>
-            Passport — <strong>{ID_POINTS.passport} points</strong>
-          </span>
-        </label>
-        {i.passport.enabled ? (
-          <div className="stack nested">
-            <div className="grid two">
-              <Field label="Passport number *">
-                <TextInput
-                  value={i.passport.number}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        passport: { ...f.identity.passport, number: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="Country of issue *">
-                <TextInput
-                  value={i.passport.country}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        passport: { ...f.identity.passport, country: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="Expiry *">
-                <TextInput
-                  type="date"
-                  value={i.passport.expiry}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        passport: { ...f.identity.passport, expiry: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-            </div>
-            <FilePicker
-              label="Passport photo page"
-              required
-              accept={PHOTO_ACCEPT}
-              files={i.passport.photo ? [i.passport.photo] : []}
-              onChange={(files) =>
-                setForm((f) => ({
-                  ...f,
-                  identity: {
-                    ...f.identity,
-                    passport: { ...f.identity.passport, photo: files[0] ?? null },
-                  },
-                }))
-              }
-            />
-          </div>
-        ) : null}
+        </div>
       </div>
 
       <div className="id-block">
-        <label className="declare">
-          <input
-            type="checkbox"
-            checked={i.medicare.enabled}
-            onChange={(e) =>
+        <h3>Medicare card</h3>
+        <div className="stack nested">
+          <div className="grid two">
+            <Field label="Card number *">
+              <TextInput
+                value={i.medicare.card_number}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      medicare: { ...f.identity.medicare, card_number: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+            <Field label="Reference number (IRN) *" hint="The number next to your name (1–9)">
+              <TextInput
+                inputMode="numeric"
+                maxLength={1}
+                value={i.medicare.reference_number}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      medicare: { ...f.identity.medicare, reference_number: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+            <Field label="Card colour *">
+              <TextSelect
+                value={i.medicare.card_colour}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      medicare: {
+                        ...f.identity.medicare,
+                        card_colour: e.target.value as MedicareColour,
+                      },
+                    },
+                  }))
+                }
+              >
+                <option value="">Select…</option>
+                <option value="green">Green</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+              </TextSelect>
+            </Field>
+            <Field label="Expiry (MM/YYYY) *">
+              <TextInput
+                placeholder="MM/YYYY"
+                value={i.medicare.expiry}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    identity: {
+                      ...f.identity,
+                      medicare: { ...f.identity.medicare, expiry: e.target.value },
+                    },
+                  }))
+                }
+              />
+            </Field>
+          </div>
+          <FilePicker
+            label="Medicare card photo"
+            required
+            accept={PHOTO_ACCEPT}
+            files={i.medicare.photo ? [i.medicare.photo] : []}
+            onChange={(files) =>
               setForm((f) => ({
                 ...f,
                 identity: {
                   ...f.identity,
-                  medicare: { ...f.identity.medicare, enabled: e.target.checked },
+                  medicare: { ...f.identity.medicare, photo: files[0] ?? null },
                 },
               }))
             }
           />
-          <span>
-            Medicare card — <strong>{ID_POINTS.medicare} points</strong>
-          </span>
-        </label>
-        {i.medicare.enabled ? (
-          <div className="stack nested">
-            <div className="grid two">
-              <Field label="Card number *">
-                <TextInput
-                  value={i.medicare.card_number}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        medicare: { ...f.identity.medicare, card_number: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="Reference number (IRN) *" hint="The number next to your name (1–9)">
-                <TextInput
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={i.medicare.reference_number}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        medicare: { ...f.identity.medicare, reference_number: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="Card colour *">
-                <TextSelect
-                  value={i.medicare.card_colour}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        medicare: {
-                          ...f.identity.medicare,
-                          card_colour: e.target.value as MedicareColour,
-                        },
-                      },
-                    }))
-                  }
-                >
-                  <option value="">Select…</option>
-                  <option value="green">Green</option>
-                  <option value="blue">Blue</option>
-                  <option value="yellow">Yellow</option>
-                </TextSelect>
-              </Field>
-              <Field label="Expiry (MM/YYYY) *">
-                <TextInput
-                  placeholder="MM/YYYY"
-                  value={i.medicare.expiry}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      identity: {
-                        ...f.identity,
-                        medicare: { ...f.identity.medicare, expiry: e.target.value },
-                      },
-                    }))
-                  }
-                />
-              </Field>
-            </div>
-            <FilePicker
-              label="Medicare card photo"
-              required
-              accept={PHOTO_ACCEPT}
-              files={i.medicare.photo ? [i.medicare.photo] : []}
-              onChange={(files) =>
-                setForm((f) => ({
-                  ...f,
-                  identity: {
-                    ...f.identity,
-                    medicare: { ...f.identity.medicare, photo: files[0] ?? null },
-                  },
-                }))
-              }
-            />
-          </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );
@@ -805,42 +738,26 @@ export function ReviewStep({ form, setForm }: Common) {
         </p>
       </div>
       <div className="review-block">
-        <h3>Identity (100 point check)</h3>
+        <h3>Identity</h3>
         <p>Nationality: {form.identity.nationality}</p>
         <ul>
-          {form.identity.drivers_licence.enabled ? (
-            <li>
-              Driver licence ({ID_POINTS.drivers_licence} pts): {form.identity.drivers_licence.number}{" "}
-              / {form.identity.drivers_licence.state} · front+back photos{" "}
-              {form.identity.drivers_licence.front && form.identity.drivers_licence.back
-                ? "attached"
-                : "missing"}
-            </li>
-          ) : null}
-          {form.identity.passport.enabled ? (
-            <li>
-              Passport ({ID_POINTS.passport} pts): {form.identity.passport.number} /{" "}
-              {form.identity.passport.country} · photo{" "}
-              {form.identity.passport.photo ? "attached" : "missing"}
-            </li>
-          ) : null}
-          {form.identity.medicare.enabled ? (
-            <li>
-              Medicare ({ID_POINTS.medicare} pts): {form.identity.medicare.card_number} ref{" "}
-              {form.identity.medicare.reference_number} ({form.identity.medicare.card_colour}) ·
-              photo {form.identity.medicare.photo ? "attached" : "missing"}
-            </li>
-          ) : null}
+          <li>
+            Driver licence: {form.identity.drivers_licence.number} /{" "}
+            {form.identity.drivers_licence.state} · front+back photos{" "}
+            {form.identity.drivers_licence.front && form.identity.drivers_licence.back
+              ? "attached"
+              : "missing"}
+          </li>
+          <li>
+            Passport: {form.identity.passport.number} / {form.identity.passport.country} · photo{" "}
+            {form.identity.passport.photo ? "attached" : "missing"}
+          </li>
+          <li>
+            Medicare: {form.identity.medicare.card_number} ref{" "}
+            {form.identity.medicare.reference_number} ({form.identity.medicare.card_colour}) · photo{" "}
+            {form.identity.medicare.photo ? "attached" : "missing"}
+          </li>
         </ul>
-        <p>
-          Total:{" "}
-          {sumIdentityPoints({
-            drivers_licence: form.identity.drivers_licence.enabled,
-            passport: form.identity.passport.enabled,
-            medicare: form.identity.medicare.enabled,
-          })}{" "}
-          points
-        </p>
       </div>
       <div className="review-block">
         <h3>Employment</h3>

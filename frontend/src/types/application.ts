@@ -20,7 +20,6 @@ export type ApplicationForm = {
   identity: {
     nationality: string;
     drivers_licence: {
-      enabled: boolean;
       number: string;
       state: string;
       expiry: string;
@@ -28,14 +27,12 @@ export type ApplicationForm = {
       back: File | null;
     };
     passport: {
-      enabled: boolean;
       number: string;
       country: string;
       expiry: string;
       photo: File | null;
     };
     medicare: {
-      enabled: boolean;
       card_number: string;
       reference_number: string;
       card_colour: MedicareColour;
@@ -122,7 +119,6 @@ export function createEmptyForm(): ApplicationForm {
     identity: {
       nationality: "Australian",
       drivers_licence: {
-        enabled: false,
         number: "",
         state: "",
         expiry: "",
@@ -130,14 +126,12 @@ export function createEmptyForm(): ApplicationForm {
         back: null,
       },
       passport: {
-        enabled: false,
         number: "",
         country: "Australia",
         expiry: "",
         photo: null,
       },
       medicare: {
-        enabled: false,
         card_number: "",
         reference_number: "",
         card_colour: "",

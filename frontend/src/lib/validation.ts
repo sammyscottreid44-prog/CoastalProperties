@@ -1,5 +1,4 @@
 import type { ApplicationForm, StepId } from "../types/application";
-import { MIN_IDENTITY_POINTS, sumIdentityPoints } from "./identityPoints";
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const phoneOk = (v: string) => v.trim().length >= 7 && v.trim().length <= 30;
@@ -24,44 +23,30 @@ export function validateStep(step: StepId, form: ApplicationForm): string[] {
     }
     case "identity": {
       if (!form.identity.nationality.trim()) errors.push("Nationality is required");
-      const { drivers_licence: dl, passport, medicare } = form.identity;
-      if (!dl.enabled && !passport.enabled && !medicare.enabled) {
-        errors.push("Select identity documents to reach 100 points");
+
+      const dl = form.identity.drivers_licence;
+      if (!dl.number.trim()) errors.push("Driver licence number is required");
+      if (!dl.state.trim()) errors.push("Driver licence state is required");
+      if (!dateOk(dl.expiry)) errors.push("Driver licence expiry is required");
+      if (!dl.front) errors.push("Driver licence front photo is required");
+      if (!dl.back) errors.push("Driver licence back photo is required");
+
+      const passport = form.identity.passport;
+      if (!passport.number.trim()) errors.push("Passport number is required");
+      if (!passport.country.trim()) errors.push("Passport country is required");
+      if (!dateOk(passport.expiry)) errors.push("Passport expiry is required");
+      if (!passport.photo) errors.push("Passport photo is required");
+
+      const medicare = form.identity.medicare;
+      if (!medicare.card_number.trim()) errors.push("Medicare card number is required");
+      if (!/^[1-9]$/.test(medicare.reference_number.trim())) {
+        errors.push("Medicare reference number (1–9) is required");
       }
-      if (dl.enabled) {
-        if (!dl.number.trim()) errors.push("Driver licence number is required");
-        if (!dl.state.trim()) errors.push("Driver licence state is required");
-        if (!dateOk(dl.expiry)) errors.push("Driver licence expiry is required");
-        if (!dl.front) errors.push("Driver licence front photo is required");
-        if (!dl.back) errors.push("Driver licence back photo is required");
+      if (!medicare.card_colour) errors.push("Medicare card colour is required");
+      if (!monthYearOk(medicare.expiry)) {
+        errors.push("Medicare expiry must be MM/YYYY");
       }
-      if (passport.enabled) {
-        if (!passport.number.trim()) errors.push("Passport number is required");
-        if (!passport.country.trim()) errors.push("Passport country is required");
-        if (!dateOk(passport.expiry)) errors.push("Passport expiry is required");
-        if (!passport.photo) errors.push("Passport photo is required");
-      }
-      if (medicare.enabled) {
-        if (!medicare.card_number.trim()) errors.push("Medicare card number is required");
-        if (!/^[1-9]$/.test(medicare.reference_number.trim())) {
-          errors.push("Medicare reference number (1–9) is required");
-        }
-        if (!medicare.card_colour) errors.push("Medicare card colour is required");
-        if (!monthYearOk(medicare.expiry)) {
-          errors.push("Medicare expiry must be MM/YYYY");
-        }
-        if (!medicare.photo) errors.push("Medicare card photo is required");
-      }
-      const points = sumIdentityPoints({
-        drivers_licence: dl.enabled,
-        passport: passport.enabled,
-        medicare: medicare.enabled,
-      });
-      if (points < MIN_IDENTITY_POINTS) {
-        errors.push(
-          `Identity documents must total at least ${MIN_IDENTITY_POINTS} points (currently ${points})`,
-        );
-      }
+      if (!medicare.photo) errors.push("Medicare card photo is required");
       break;
     }
     case "employment": {

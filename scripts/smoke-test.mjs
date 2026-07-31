@@ -95,21 +95,17 @@ async function main() {
       },
       identity: {
         nationality: "Australian",
-        points_total: 135,
         drivers_licence: {
-          provided: true,
           number: "D1234567",
           state: "NSW",
           expiry: "2028-04-12",
         },
         passport: {
-          provided: true,
           number: "PA1234567",
           country: "Australia",
           expiry: "2030-01-01",
         },
         medicare: {
-          provided: true,
           card_number: "2123456781",
           reference_number: "1",
           card_colour: "green",

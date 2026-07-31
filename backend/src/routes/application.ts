@@ -17,6 +17,13 @@ import {
 
 export const applicationRouter = Router();
 
+const REQUIRED_IDENTITY_FILES = [
+  "drivers_licence_front",
+  "drivers_licence_back",
+  "passport_photo",
+  "medicare_photo",
+] as const;
+
 applicationRouter.post(
   "/submit",
   upload.fields([
@@ -37,19 +44,10 @@ applicationRouter.post(
 
       const files = (req.files as Record<string, Express.Multer.File[]> | undefined) ?? {};
 
-      if (payload.identity.drivers_licence) {
-        if (!files.drivers_licence_front?.length) {
-          throw new HttpError(400, "Driver licence front photo is required");
+      for (const field of REQUIRED_IDENTITY_FILES) {
+        if (!files[field]?.length) {
+          throw new HttpError(400, `Missing required identity upload: ${field}`);
         }
-        if (!files.drivers_licence_back?.length) {
-          throw new HttpError(400, "Driver licence back photo is required");
-        }
-      }
-      if (payload.identity.passport && !files.passport_photo?.length) {
-        throw new HttpError(400, "Passport photo is required");
-      }
-      if (payload.identity.medicare && !files.medicare_photo?.length) {
-        throw new HttpError(400, "Medicare card photo is required");
       }
       if (!files.payslips?.length) {
         throw new HttpError(400, "At least one payslip is required");
@@ -139,7 +137,6 @@ applicationRouter.post(
         submission_id: submissionId,
         application_group: payload.application_group,
         file_count: storedFiles.length + 1,
-        identity_points: payload.identity.points_total,
         notify_success: notify.success,
       });
 

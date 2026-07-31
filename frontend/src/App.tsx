@@ -70,7 +70,7 @@ export default function App() {
         submissionId: result.submission_id,
         message: result.message,
       });
-      localStorage.removeItem("coastapply.application.draft.v2");
+      localStorage.removeItem("coastapply.application.draft.v3");
     } catch {
       setSubmitState({
         status: "error",

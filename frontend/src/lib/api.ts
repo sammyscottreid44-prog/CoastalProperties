@@ -1,5 +1,4 @@
 import type { ApplicationForm } from "../types/application";
-import { sumIdentityPoints } from "./identityPoints";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -18,43 +17,27 @@ export type InviteResult = {
 };
 
 function buildPayload(form: ApplicationForm) {
-  const points = sumIdentityPoints({
-    drivers_licence: form.identity.drivers_licence.enabled,
-    passport: form.identity.passport.enabled,
-    medicare: form.identity.medicare.enabled,
-  });
-
   return {
     application_group: form.application_group,
     applicant: form.applicant,
     identity: {
       nationality: form.identity.nationality,
-      points_total: points,
-      drivers_licence: form.identity.drivers_licence.enabled
-        ? {
-            provided: true as const,
-            number: form.identity.drivers_licence.number,
-            state: form.identity.drivers_licence.state,
-            expiry: form.identity.drivers_licence.expiry,
-          }
-        : null,
-      passport: form.identity.passport.enabled
-        ? {
-            provided: true as const,
-            number: form.identity.passport.number,
-            country: form.identity.passport.country,
-            expiry: form.identity.passport.expiry,
-          }
-        : null,
-      medicare: form.identity.medicare.enabled
-        ? {
-            provided: true as const,
-            card_number: form.identity.medicare.card_number,
-            reference_number: form.identity.medicare.reference_number,
-            card_colour: form.identity.medicare.card_colour,
-            expiry: form.identity.medicare.expiry,
-          }
-        : null,
+      drivers_licence: {
+        number: form.identity.drivers_licence.number,
+        state: form.identity.drivers_licence.state,
+        expiry: form.identity.drivers_licence.expiry,
+      },
+      passport: {
+        number: form.identity.passport.number,
+        country: form.identity.passport.country,
+        expiry: form.identity.passport.expiry,
+      },
+      medicare: {
+        card_number: form.identity.medicare.card_number,
+        reference_number: form.identity.medicare.reference_number,
+        card_colour: form.identity.medicare.card_colour,
+        expiry: form.identity.medicare.expiry,
+      },
     },
     employment: form.employment,
     address: form.address,
@@ -76,18 +59,16 @@ export async function submitApplication(form: ApplicationForm): Promise<SubmitRe
   const body = new FormData();
   body.append("payload", JSON.stringify(buildPayload(form)));
 
-  if (form.identity.drivers_licence.enabled) {
-    if (form.identity.drivers_licence.front) {
-      body.append("drivers_licence_front", form.identity.drivers_licence.front);
-    }
-    if (form.identity.drivers_licence.back) {
-      body.append("drivers_licence_back", form.identity.drivers_licence.back);
-    }
+  if (form.identity.drivers_licence.front) {
+    body.append("drivers_licence_front", form.identity.drivers_licence.front);
   }
-  if (form.identity.passport.enabled && form.identity.passport.photo) {
+  if (form.identity.drivers_licence.back) {
+    body.append("drivers_licence_back", form.identity.drivers_licence.back);
+  }
+  if (form.identity.passport.photo) {
     body.append("passport_photo", form.identity.passport.photo);
   }
-  if (form.identity.medicare.enabled && form.identity.medicare.photo) {
+  if (form.identity.medicare.photo) {
     body.append("medicare_photo", form.identity.medicare.photo);
   }
 
