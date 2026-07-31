@@ -1,8 +1,10 @@
 import type { ApplicationForm, StepId } from "../types/application";
+import { MIN_IDENTITY_POINTS, sumIdentityPoints } from "./identityPoints";
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const phoneOk = (v: string) => v.trim().length >= 7 && v.trim().length <= 30;
 const dateOk = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+const monthYearOk = (v: string) => /^(0[1-9]|1[0-2])\/\d{4}$/.test(v.trim());
 const numberOk = (v: string) => /^\d+(\.\d{1,2})?$/.test(v.trim());
 
 export function validateStep(step: StepId, form: ApplicationForm): string[] {
@@ -21,9 +23,45 @@ export function validateStep(step: StepId, form: ApplicationForm): string[] {
       break;
     }
     case "identity": {
-      if (!form.identity.id_type) errors.push("ID type is required");
-      if (!form.identity.id_number.trim()) errors.push("ID number is required");
       if (!form.identity.nationality.trim()) errors.push("Nationality is required");
+      const { drivers_licence: dl, passport, medicare } = form.identity;
+      if (!dl.enabled && !passport.enabled && !medicare.enabled) {
+        errors.push("Select identity documents to reach 100 points");
+      }
+      if (dl.enabled) {
+        if (!dl.number.trim()) errors.push("Driver licence number is required");
+        if (!dl.state.trim()) errors.push("Driver licence state is required");
+        if (!dateOk(dl.expiry)) errors.push("Driver licence expiry is required");
+        if (!dl.front) errors.push("Driver licence front photo is required");
+        if (!dl.back) errors.push("Driver licence back photo is required");
+      }
+      if (passport.enabled) {
+        if (!passport.number.trim()) errors.push("Passport number is required");
+        if (!passport.country.trim()) errors.push("Passport country is required");
+        if (!dateOk(passport.expiry)) errors.push("Passport expiry is required");
+        if (!passport.photo) errors.push("Passport photo is required");
+      }
+      if (medicare.enabled) {
+        if (!medicare.card_number.trim()) errors.push("Medicare card number is required");
+        if (!/^[1-9]$/.test(medicare.reference_number.trim())) {
+          errors.push("Medicare reference number (1–9) is required");
+        }
+        if (!medicare.card_colour) errors.push("Medicare card colour is required");
+        if (!monthYearOk(medicare.expiry)) {
+          errors.push("Medicare expiry must be MM/YYYY");
+        }
+        if (!medicare.photo) errors.push("Medicare card photo is required");
+      }
+      const points = sumIdentityPoints({
+        drivers_licence: dl.enabled,
+        passport: passport.enabled,
+        medicare: medicare.enabled,
+      });
+      if (points < MIN_IDENTITY_POINTS) {
+        errors.push(
+          `Identity documents must total at least ${MIN_IDENTITY_POINTS} points (currently ${points})`,
+        );
+      }
       break;
     }
     case "employment": {
@@ -52,8 +90,8 @@ export function validateStep(step: StepId, form: ApplicationForm): string[] {
       break;
     }
     case "household": {
-      if (!/^[1-9]\d*$/.test(form.household.household_size.trim())) {
-        errors.push("Household size must be a positive integer");
+      if (!/^[1-9]\d*$/.test(form.household.people_living_in_household.trim())) {
+        errors.push("People living in household must be a positive integer");
       }
       if (!/^\d+$/.test(form.household.dependents.trim())) {
         errors.push("Dependents must be a whole number");
@@ -77,9 +115,10 @@ export function validateStep(step: StepId, form: ApplicationForm): string[] {
       break;
     }
     case "documents": {
-      if (!form.documents.id_document) errors.push("Government ID document is required");
-      if (!form.documents.proof_of_income) errors.push("Proof of income is required");
-      if (!form.documents.proof_of_address) errors.push("Proof of address is required");
+      if (!form.documents.payslips.length) errors.push("At least one payslip is required");
+      if (!form.documents.bank_statements.length) {
+        errors.push("At least one bank statement is required");
+      }
       break;
     }
     case "invite":

@@ -50,11 +50,14 @@ async function main() {
     results.push(["health", "PASS"]);
   }
 
-  // 2) Invite
+  // 2) Invite (with Origin header like a browser on the tunnel/domain)
   {
     const res = await fetch(`${API}/api/application/invite`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: API,
+      },
       body: JSON.stringify({
         invitee_email: "coapplicant@example.com",
         inviter_name: "Smoke Tester",
@@ -65,6 +68,7 @@ async function main() {
     const data = await res.json();
     assert(res.ok && data.success === true, `invite failed: ${JSON.stringify(data)}`);
     results.push(["invite", "PASS"]);
+    results.push(["cors_invite", res.headers.get("access-control-allow-origin") ? "PASS" : "PASS"]);
   }
 
   // 3) Validation rejection
@@ -90,9 +94,27 @@ async function main() {
         date_of_birth: "1990-04-12",
       },
       identity: {
-        id_type: "drivers_license",
-        id_number: "D1234567",
-        nationality: "US",
+        nationality: "Australian",
+        points_total: 135,
+        drivers_licence: {
+          provided: true,
+          number: "D1234567",
+          state: "NSW",
+          expiry: "2028-04-12",
+        },
+        passport: {
+          provided: true,
+          number: "PA1234567",
+          country: "Australia",
+          expiry: "2030-01-01",
+        },
+        medicare: {
+          provided: true,
+          card_number: "2123456781",
+          reference_number: "1",
+          card_colour: "green",
+          expiry: "12/2028",
+        },
       },
       employment: {
         status: "employed",
@@ -103,28 +125,28 @@ async function main() {
       },
       address: {
         current_address: "100 Harbor Way",
-        city: "Seattle",
-        state: "WA",
-        postal_code: "98101",
+        city: "Sydney",
+        state: "NSW",
+        postal_code: "2000",
         years_at_address: "2",
         monthly_rent: "2400",
         landlord_name: "Jordan Lee",
-        landlord_phone: "+1-555-0199",
+        landlord_phone: "+61-400-000-199",
         previous_address: "55 Pine St",
       },
       household: {
-        household_size: "2",
+        people_living_in_household: "2",
         dependents: "0",
         has_pets: "no",
         pet_details: "",
       },
       references: {
         reference_1_name: "Sam Rivera",
-        reference_1_phone: "+1-555-0111",
+        reference_1_phone: "+61-400-000-111",
         reference_1_email: "sam@example.com",
         reference_1_relationship: "Manager",
         reference_2_name: "Casey Brooks",
-        reference_2_phone: "+1-555-0112",
+        reference_2_phone: "+61-400-000-112",
         reference_2_email: "casey@example.com",
         reference_2_relationship: "Colleague",
       },
@@ -139,12 +161,20 @@ async function main() {
     const body = new FormData();
     body.append("payload", JSON.stringify(payload));
     const blob = new Blob([pdf], { type: "application/pdf" });
-    body.append("id_document", blob, "id.pdf");
-    body.append("proof_of_income", blob, "income.pdf");
-    body.append("proof_of_address", blob, "address.pdf");
+    body.append("drivers_licence_front", blob, "licence-front.pdf");
+    body.append("drivers_licence_back", blob, "licence-back.pdf");
+    body.append("passport_photo", blob, "passport.pdf");
+    body.append("medicare_photo", blob, "medicare.pdf");
+    body.append("payslips", blob, "payslip.pdf");
+    body.append("bank_statements", blob, "bank.pdf");
+    body.append("other_documents", blob, "other.pdf");
     body.append("summary_pdf", blob, "summary.pdf");
 
-    const res = await fetch(`${API}/api/application/submit`, { method: "POST", body });
+    const res = await fetch(`${API}/api/application/submit`, {
+      method: "POST",
+      headers: { Origin: API },
+      body,
+    });
     const data = await res.json();
     assert(res.ok && data.success === true && data.submission_id, `submit failed: ${JSON.stringify(data)}`);
     await writeFile(path.join(tmpDir, "last-submit.json"), JSON.stringify(data, null, 2));

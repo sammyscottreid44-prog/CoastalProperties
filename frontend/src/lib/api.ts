@@ -1,4 +1,5 @@
 import type { ApplicationForm } from "../types/application";
+import { sumIdentityPoints } from "./identityPoints";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -17,10 +18,44 @@ export type InviteResult = {
 };
 
 function buildPayload(form: ApplicationForm) {
+  const points = sumIdentityPoints({
+    drivers_licence: form.identity.drivers_licence.enabled,
+    passport: form.identity.passport.enabled,
+    medicare: form.identity.medicare.enabled,
+  });
+
   return {
     application_group: form.application_group,
     applicant: form.applicant,
-    identity: form.identity,
+    identity: {
+      nationality: form.identity.nationality,
+      points_total: points,
+      drivers_licence: form.identity.drivers_licence.enabled
+        ? {
+            provided: true as const,
+            number: form.identity.drivers_licence.number,
+            state: form.identity.drivers_licence.state,
+            expiry: form.identity.drivers_licence.expiry,
+          }
+        : null,
+      passport: form.identity.passport.enabled
+        ? {
+            provided: true as const,
+            number: form.identity.passport.number,
+            country: form.identity.passport.country,
+            expiry: form.identity.passport.expiry,
+          }
+        : null,
+      medicare: form.identity.medicare.enabled
+        ? {
+            provided: true as const,
+            card_number: form.identity.medicare.card_number,
+            reference_number: form.identity.medicare.reference_number,
+            card_colour: form.identity.medicare.card_colour,
+            expiry: form.identity.medicare.expiry,
+          }
+        : null,
+    },
     employment: form.employment,
     address: form.address,
     household: form.household,
@@ -41,22 +76,30 @@ export async function submitApplication(form: ApplicationForm): Promise<SubmitRe
   const body = new FormData();
   body.append("payload", JSON.stringify(buildPayload(form)));
 
-  if (form.documents.id_document) {
-    body.append("id_document", form.documents.id_document);
+  if (form.identity.drivers_licence.enabled) {
+    if (form.identity.drivers_licence.front) {
+      body.append("drivers_licence_front", form.identity.drivers_licence.front);
+    }
+    if (form.identity.drivers_licence.back) {
+      body.append("drivers_licence_back", form.identity.drivers_licence.back);
+    }
   }
-  if (form.documents.proof_of_income) {
-    body.append("proof_of_income", form.documents.proof_of_income);
+  if (form.identity.passport.enabled && form.identity.passport.photo) {
+    body.append("passport_photo", form.identity.passport.photo);
   }
-  if (form.documents.proof_of_address) {
-    body.append("proof_of_address", form.documents.proof_of_address);
-  }
-  for (const file of form.documents.additional_documents) {
-    body.append("additional_documents", file);
+  if (form.identity.medicare.enabled && form.identity.medicare.photo) {
+    body.append("medicare_photo", form.identity.medicare.photo);
   }
 
-  // Client-side marker PDF is optional; server always generates an authoritative packet.
-  // We still attach a lightweight text blob labeled as summary when available from browser print path.
-  // Backend generates the real PDF packet regardless.
+  for (const file of form.documents.payslips) {
+    body.append("payslips", file);
+  }
+  for (const file of form.documents.bank_statements) {
+    body.append("bank_statements", file);
+  }
+  for (const file of form.documents.other_documents) {
+    body.append("other_documents", file);
+  }
 
   const res = await fetch(`${API_BASE}/api/application/submit`, {
     method: "POST",

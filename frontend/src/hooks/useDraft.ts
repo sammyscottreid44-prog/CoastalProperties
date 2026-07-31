@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createEmptyForm, type ApplicationForm } from "../types/application";
 
-const STORAGE_KEY = "coastapply.application.draft.v1";
+const STORAGE_KEY = "coastapply.application.draft.v2";
 
 type DraftShape = Omit<ApplicationForm, "documents"> & {
   stepIndex: number;

@@ -95,7 +95,7 @@ export const config = {
   limits: {
     maxFileBytes: Number(process.env.MAX_FILE_BYTES ?? 10 * 1024 * 1024),
     maxTotalUploadBytes: Number(process.env.MAX_TOTAL_UPLOAD_BYTES ?? 40 * 1024 * 1024),
-    maxFiles: Number(process.env.MAX_FILES ?? 12),
+    maxFiles: Number(process.env.MAX_FILES ?? 24),
     rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
     rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 30),
   },

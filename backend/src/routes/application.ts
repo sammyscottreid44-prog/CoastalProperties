@@ -17,15 +17,16 @@ import {
 
 export const applicationRouter = Router();
 
-const REQUIRED_DOC_FIELDS = ["id_document", "proof_of_income", "proof_of_address"] as const;
-
 applicationRouter.post(
   "/submit",
   upload.fields([
-    { name: "id_document", maxCount: 1 },
-    { name: "proof_of_income", maxCount: 1 },
-    { name: "proof_of_address", maxCount: 1 },
-    { name: "additional_documents", maxCount: 8 },
+    { name: "drivers_licence_front", maxCount: 1 },
+    { name: "drivers_licence_back", maxCount: 1 },
+    { name: "passport_photo", maxCount: 1 },
+    { name: "medicare_photo", maxCount: 1 },
+    { name: "payslips", maxCount: 8 },
+    { name: "bank_statements", maxCount: 8 },
+    { name: "other_documents", maxCount: 8 },
     { name: "summary_pdf", maxCount: 1 },
   ]),
   async (req, res, next) => {
@@ -34,18 +35,33 @@ applicationRouter.post(
       const parsedUnknown = parseJsonField<unknown>(rawPayload, "payload");
       const payload: ApplicationPayload = applicationPayloadSchema.parse(parsedUnknown);
 
-      const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-      if (!files) {
-        throw new HttpError(400, "Supporting documents are required");
-      }
+      const files = (req.files as Record<string, Express.Multer.File[]> | undefined) ?? {};
 
-      for (const field of REQUIRED_DOC_FIELDS) {
-        if (!files[field]?.length) {
-          throw new HttpError(400, `Missing required document: ${field}`);
+      if (payload.identity.drivers_licence) {
+        if (!files.drivers_licence_front?.length) {
+          throw new HttpError(400, "Driver licence front photo is required");
         }
+        if (!files.drivers_licence_back?.length) {
+          throw new HttpError(400, "Driver licence back photo is required");
+        }
+      }
+      if (payload.identity.passport && !files.passport_photo?.length) {
+        throw new HttpError(400, "Passport photo is required");
+      }
+      if (payload.identity.medicare && !files.medicare_photo?.length) {
+        throw new HttpError(400, "Medicare card photo is required");
+      }
+      if (!files.payslips?.length) {
+        throw new HttpError(400, "At least one payslip is required");
+      }
+      if (!files.bank_statements?.length) {
+        throw new HttpError(400, "At least one bank statement is required");
       }
 
       const allUploads = Object.values(files).flat();
+      if (!allUploads.length) {
+        throw new HttpError(400, "Supporting documents are required");
+      }
       const totalBytes = allUploads.reduce((sum, f) => sum + f.size, 0);
       if (totalBytes > config.limits.maxTotalUploadBytes) {
         throw new HttpError(400, "Total upload size exceeds the allowed limit");
@@ -89,7 +105,6 @@ applicationRouter.post(
         });
       }
 
-      // Always also generate a server-side packet for integrity when client PDF was provided
       if (clientPdf) {
         const serverPacket = await generateSummaryPdf(payload);
         const serverStored = await storeFile({
@@ -124,6 +139,7 @@ applicationRouter.post(
         submission_id: submissionId,
         application_group: payload.application_group,
         file_count: storedFiles.length + 1,
+        identity_points: payload.identity.points_total,
         notify_success: notify.success,
       });
 

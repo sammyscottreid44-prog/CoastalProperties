@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import { brand } from "../brand.js";
+import { ID_POINTS } from "../utils/identityPoints.js";
 import type { ApplicationPayload } from "../utils/validation.js";
 
 function section(doc: PDFKit.PDFDocument, title: string, rows: Array<[string, string]>) {
@@ -36,11 +37,32 @@ export async function generateSummaryPdf(payload: ApplicationPayload): Promise<B
       ["Date of birth", payload.applicant.date_of_birth],
     ]);
 
-    section(doc, "Identity", [
-      ["ID type", payload.identity.id_type],
-      ["ID number", payload.identity.id_number],
+    const identityRows: Array<[string, string]> = [
       ["Nationality", payload.identity.nationality],
-    ]);
+      ["100-point total", String(payload.identity.points_total)],
+    ];
+    if (payload.identity.drivers_licence) {
+      identityRows.push(
+        ["Driver licence", `${payload.identity.drivers_licence.number} (${payload.identity.drivers_licence.state}) — ${ID_POINTS.drivers_licence} pts`],
+        ["Licence expiry", payload.identity.drivers_licence.expiry],
+      );
+    }
+    if (payload.identity.passport) {
+      identityRows.push(
+        ["Passport", `${payload.identity.passport.number} (${payload.identity.passport.country}) — ${ID_POINTS.passport} pts`],
+        ["Passport expiry", payload.identity.passport.expiry],
+      );
+    }
+    if (payload.identity.medicare) {
+      identityRows.push(
+        [
+          "Medicare",
+          `${payload.identity.medicare.card_number} ref ${payload.identity.medicare.reference_number} (${payload.identity.medicare.card_colour}) — ${ID_POINTS.medicare} pts`,
+        ],
+        ["Medicare expiry", payload.identity.medicare.expiry],
+      );
+    }
+    section(doc, "Identity (100 point check)", identityRows);
 
     section(doc, "Employment / Income", [
       ["Status", payload.employment.status],
@@ -63,7 +85,7 @@ export async function generateSummaryPdf(payload: ApplicationPayload): Promise<B
     ]);
 
     section(doc, "Household", [
-      ["Household size", payload.household.household_size],
+      ["People living in household", payload.household.people_living_in_household],
       ["Dependents", payload.household.dependents],
       ["Pets", payload.household.has_pets],
       ["Pet details", payload.household.pet_details ?? ""],

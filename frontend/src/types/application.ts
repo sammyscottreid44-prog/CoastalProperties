@@ -6,6 +6,8 @@ export type CoApplicant = {
   message?: string;
 };
 
+export type MedicareColour = "green" | "blue" | "yellow" | "";
+
 export type ApplicationForm = {
   application_group: string;
   applicant: {
@@ -16,9 +18,30 @@ export type ApplicationForm = {
     date_of_birth: string;
   };
   identity: {
-    id_type: "passport" | "drivers_license" | "national_id" | "other" | "";
-    id_number: string;
     nationality: string;
+    drivers_licence: {
+      enabled: boolean;
+      number: string;
+      state: string;
+      expiry: string;
+      front: File | null;
+      back: File | null;
+    };
+    passport: {
+      enabled: boolean;
+      number: string;
+      country: string;
+      expiry: string;
+      photo: File | null;
+    };
+    medicare: {
+      enabled: boolean;
+      card_number: string;
+      reference_number: string;
+      card_colour: MedicareColour;
+      expiry: string;
+      photo: File | null;
+    };
   };
   employment: {
     status: "employed" | "self_employed" | "student" | "unemployed" | "retired" | "";
@@ -39,7 +62,7 @@ export type ApplicationForm = {
     previous_address: string;
   };
   household: {
-    household_size: string;
+    people_living_in_household: string;
     dependents: string;
     has_pets: "yes" | "no" | "";
     pet_details: string;
@@ -55,10 +78,9 @@ export type ApplicationForm = {
     reference_2_relationship: string;
   };
   documents: {
-    id_document: File | null;
-    proof_of_income: File | null;
-    proof_of_address: File | null;
-    additional_documents: File[];
+    payslips: File[];
+    bank_statements: File[];
+    other_documents: File[];
   };
   co_applicants: CoApplicant[];
   declaration: {
@@ -98,9 +120,30 @@ export function createEmptyForm(): ApplicationForm {
       date_of_birth: "",
     },
     identity: {
-      id_type: "",
-      id_number: "",
-      nationality: "",
+      nationality: "Australian",
+      drivers_licence: {
+        enabled: false,
+        number: "",
+        state: "",
+        expiry: "",
+        front: null,
+        back: null,
+      },
+      passport: {
+        enabled: false,
+        number: "",
+        country: "Australia",
+        expiry: "",
+        photo: null,
+      },
+      medicare: {
+        enabled: false,
+        card_number: "",
+        reference_number: "",
+        card_colour: "",
+        expiry: "",
+        photo: null,
+      },
     },
     employment: {
       status: "",
@@ -121,7 +164,7 @@ export function createEmptyForm(): ApplicationForm {
       previous_address: "",
     },
     household: {
-      household_size: "1",
+      people_living_in_household: "1",
       dependents: "0",
       has_pets: "no",
       pet_details: "",
@@ -137,10 +180,9 @@ export function createEmptyForm(): ApplicationForm {
       reference_2_relationship: "",
     },
     documents: {
-      id_document: null,
-      proof_of_income: null,
-      proof_of_address: null,
-      additional_documents: [],
+      payslips: [],
+      bank_statements: [],
+      other_documents: [],
     },
     co_applicants: [],
     declaration: {

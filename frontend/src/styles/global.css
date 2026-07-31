@@ -486,6 +486,35 @@ body::before {
   line-height: 1.45;
 }
 
+.points-banner {
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  font-size: 0.98rem;
+}
+
+.points-banner.ok {
+  background: rgba(6, 118, 71, 0.1);
+  border: 1px solid rgba(6, 118, 71, 0.25);
+  color: var(--ok);
+}
+
+.points-banner.short {
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  color: #92400e;
+}
+
+.id-block {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.stack.nested {
+  margin-top: 0.85rem;
+}
+
 .alert {
   margin-top: 1rem;
   border-radius: 12px;
