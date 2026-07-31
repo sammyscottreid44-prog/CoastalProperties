@@ -26,10 +26,11 @@ KqKcSMDffHOc9AHrKqvZgZGi
 
 ## What you can do
 
-- See every submission (newest first)
-- Open a submission to view the full JSON details
-- Download individual uploaded files
-- Download a **ZIP** of the whole submission (JSON + all files + PDF)
+- See every application (newest first)
+- Open **View** for a clean layout of applicant details (identity, employment, address, household, references)
+- **View** uploaded images in a lightbox; open PDFs inline
+- Download individual files
+- Download each application as its own **ZIP** (readable summary + JSON + all files in folders)
 
 ## Notes
 
