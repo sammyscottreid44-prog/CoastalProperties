@@ -544,6 +544,16 @@ body::before {
   color: var(--brand-deep);
 }
 
+.co-applicant-banner {
+  margin-bottom: 1rem;
+}
+
+.co-applicant-banner code {
+  background: rgba(15, 110, 92, 0.1);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
 .alert ul {
   margin: 0.4rem 0 0;
   padding-left: 1.1rem;

@@ -24,6 +24,7 @@ const monthYearString = z
 
 export const applicationPayloadSchema = z.object({
   application_group: nonEmpty("Application group"),
+  role: z.enum(["primary", "co_applicant"]).default("primary"),
   applicant: z.object({
     first_name: nonEmpty("First name"),
     last_name: nonEmpty("Last name"),

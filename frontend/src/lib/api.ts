@@ -21,6 +21,7 @@ export type InviteResult = {
 function buildPayload(form: ApplicationForm) {
   return {
     application_group: form.application_group,
+    role: form.role,
     applicant: form.applicant,
     identity: {
       nationality: form.identity.nationality,

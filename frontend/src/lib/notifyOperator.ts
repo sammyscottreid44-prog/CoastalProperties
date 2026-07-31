@@ -16,6 +16,7 @@ export async function notifyOperatorOfSubmission(params: {
     ``,
     `Submission ID: ${params.submissionId}`,
     `Reference: ${f.application_group}`,
+    `Role: ${f.role === "co_applicant" ? "Co-applicant" : "Primary applicant"}`,
     `Applicant: ${f.applicant.first_name} ${f.applicant.last_name}`,
     `Email: ${f.applicant.email}`,
     `Phone: ${f.applicant.phone}`,

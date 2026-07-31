@@ -87,6 +87,7 @@ async function main() {
     const pdf = await tinyPdf();
     const payload = {
       application_group: "smoke-group-001",
+      role: "primary",
       applicant: {
         first_name: "Avery",
         last_name: "Nguyen",

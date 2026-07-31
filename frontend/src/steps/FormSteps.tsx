@@ -757,6 +757,7 @@ export function ReviewStep({ form, setForm }: Common) {
       <div className="review-block">
         <h3>Applicant</h3>
         <p>
+          {form.role === "co_applicant" ? "Co-applicant" : "Primary applicant"} ·{" "}
           {form.applicant.first_name} {form.applicant.last_name} · {form.applicant.email} ·{" "}
           {form.applicant.phone}
         </p>

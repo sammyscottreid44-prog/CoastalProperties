@@ -9,8 +9,11 @@ export type CoApplicant = {
 
 export type MedicareColour = "green" | "blue" | "yellow" | "";
 
+export type ApplicantRole = "primary" | "co_applicant";
+
 export type ApplicationForm = {
   application_group: string;
+  role: ApplicantRole;
   applicant: {
     first_name: string;
     last_name: string;
@@ -102,14 +105,19 @@ export const STEPS = [
 
 export type StepId = (typeof STEPS)[number]["id"];
 
-export function createEmptyForm(): ApplicationForm {
+export function createEmptyForm(options?: {
+  applicationGroup?: string;
+  role?: ApplicantRole;
+}): ApplicationForm {
   const group =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
+    options?.applicationGroup ||
+    (typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
-      : `app-${Date.now()}`;
+      : `app-${Date.now()}`);
 
   return {
     application_group: group,
+    role: options?.role ?? "primary",
     applicant: {
       first_name: "",
       last_name: "",

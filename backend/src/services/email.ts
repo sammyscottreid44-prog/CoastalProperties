@@ -193,6 +193,7 @@ function formatSubmissionText(params: {
     ``,
     `Submission ID: ${params.submissionId}`,
     `Application group: ${params.applicationGroup}`,
+    `Role: ${params.payload?.role === "co_applicant" ? "Co-applicant" : "Primary applicant"}`,
     `Applicant: ${params.applicantName}`,
     `Applicant email: ${params.applicantEmail}`,
     `Portal: ${params.appBaseUrl}`,

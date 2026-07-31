@@ -30,6 +30,7 @@ export async function generateSummaryPdf(payload: ApplicationPayload): Promise<B
       .text(`Generated: ${new Date().toISOString()}`);
 
     section(doc, "Applicant Details", [
+      ["Role", payload.role === "co_applicant" ? "Co-applicant" : "Primary applicant"],
       ["Name", `${payload.applicant.first_name} ${payload.applicant.last_name}`],
       ["Email", payload.applicant.email],
       ["Phone", payload.applicant.phone],
