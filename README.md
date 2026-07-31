@@ -199,6 +199,20 @@ npm start
 
 Confirm `/api/health` and a smoke submit against the rolled-back release.
 
+## Admin access (view / download submissions)
+
+Open `/admin` on your deployed site and sign in with `ADMIN_PASSWORD`.
+
+- List all submissions
+- Open full application details
+- Download individual files or a full ZIP
+
+See `docs/ADMIN_ACCESS.md`.
+
+```bash
+ADMIN_PASSWORD=your-long-random-password
+```
+
 ## Smoke tests
 
 ```bash

@@ -77,10 +77,16 @@ if (isProduction) {
   requiredInProduction("NOTIFY_EMAIL", process.env.NOTIFY_EMAIL);
 }
 
+const adminPassword = process.env.ADMIN_PASSWORD?.trim() || "";
+if (isProduction && !adminPassword) {
+  requiredInProduction("ADMIN_PASSWORD", process.env.ADMIN_PASSWORD);
+}
+
 export const config = {
   nodeEnv,
   isProduction,
   port: Number(process.env.PORT ?? 3001),
+  adminPassword,
   appBaseUrl: defaultAppBaseUrl,
   corsOrigins: defaultCorsOrigins
     .split(",")
