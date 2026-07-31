@@ -31,6 +31,20 @@ const emailDriver = (process.env.EMAIL_DRIVER ?? (isProduction ? "resend" : "con
   | "resend"
   | "console";
 
+// Render injects RENDER_EXTERNAL_URL (e.g. https://coastapply.onrender.com)
+const renderExternalUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "") || "";
+const defaultAppBaseUrl =
+  process.env.APP_BASE_URL ||
+  renderExternalUrl ||
+  (isProduction ? brand.appBaseUrl : "http://localhost:5173");
+const defaultCorsOrigins =
+  process.env.CORS_ORIGINS ||
+  (renderExternalUrl
+    ? `${renderExternalUrl},https://${brand.domain},https://www.${brand.domain}`
+    : isProduction
+      ? `https://${brand.domain},https://www.${brand.domain}`
+      : "http://localhost:5173,http://localhost:3001");
+
 if (isProduction) {
   if (storageDriver === "s3") {
     requiredInProduction("S3_BUCKET", process.env.S3_BUCKET);
@@ -42,8 +56,13 @@ if (isProduction) {
     requiredInProduction("RESEND_API_KEY", process.env.RESEND_API_KEY);
     requiredInProduction("EMAIL_FROM", process.env.EMAIL_FROM);
   }
-  requiredInProduction("CORS_ORIGINS", process.env.CORS_ORIGINS);
-  requiredInProduction("APP_BASE_URL", process.env.APP_BASE_URL);
+  // Allow Render auto-URL instead of forcing custom-domain env up front
+  if (!process.env.CORS_ORIGINS && !renderExternalUrl) {
+    requiredInProduction("CORS_ORIGINS", process.env.CORS_ORIGINS);
+  }
+  if (!process.env.APP_BASE_URL && !renderExternalUrl) {
+    requiredInProduction("APP_BASE_URL", process.env.APP_BASE_URL);
+  }
   requiredInProduction("NOTIFY_EMAIL", process.env.NOTIFY_EMAIL);
 }
 
@@ -51,13 +70,8 @@ export const config = {
   nodeEnv,
   isProduction,
   port: Number(process.env.PORT ?? 3001),
-  appBaseUrl: process.env.APP_BASE_URL ?? (isProduction ? brand.appBaseUrl : "http://localhost:5173"),
-  corsOrigins: (
-    process.env.CORS_ORIGINS ??
-    (isProduction
-      ? `https://${brand.domain},https://www.${brand.domain}`
-      : "http://localhost:5173")
-  )
+  appBaseUrl: defaultAppBaseUrl,
+  corsOrigins: defaultCorsOrigins
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),

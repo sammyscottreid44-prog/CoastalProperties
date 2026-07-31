@@ -1,0 +1,29 @@
+# Persistent hosting without Squarespace/Vercel custom-domain auth.
+# Deploy: push this repo to GitHub → https://dashboard.render.com → New → Blueprint
+# You get an immediate https://*.onrender.com URL.
+services:
+  - type: web
+    name: coastapply
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      # APP_BASE_URL / CORS_ORIGINS auto-derive from Render's RENDER_EXTERNAL_URL
+      - key: STORAGE_DRIVER
+        value: local
+      - key: LOCAL_UPLOAD_DIR
+        value: ./uploads
+      - key: LOCAL_DATA_DIR
+        value: ./data
+      - key: EMAIL_DRIVER
+        value: console
+      - key: EMAIL_FROM
+        value: CoastApply <applications@coastapply.com>
+      - key: NOTIFY_EMAIL
+        value: sammyscottreid44@gmail.com
