@@ -3,9 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootEnv = path.resolve(__dirname, "../../.env");
+const repoRoot = path.resolve(__dirname, "../..");
+const rootEnv = path.resolve(repoRoot, ".env");
 dotenv.config({ path: rootEnv });
 dotenv.config();
+
+function resolveFromRepo(value: string | undefined, fallbackRelative: string): string {
+  if (!value) return path.resolve(repoRoot, fallbackRelative);
+  return path.isAbsolute(value) ? value : path.resolve(repoRoot, value);
+}
 
 function requiredInProduction(name: string, value: string | undefined): string | undefined {
   if (process.env.NODE_ENV === "production" && !value) {
@@ -51,12 +57,8 @@ export const config = {
     .filter(Boolean),
   storageDriver,
   emailDriver,
-  localUploadDir: process.env.LOCAL_UPLOAD_DIR
-    ? path.resolve(process.env.LOCAL_UPLOAD_DIR)
-    : path.resolve(__dirname, "../../uploads"),
-  localDataDir: process.env.LOCAL_DATA_DIR
-    ? path.resolve(process.env.LOCAL_DATA_DIR)
-    : path.resolve(__dirname, "../../data"),
+  localUploadDir: resolveFromRepo(process.env.LOCAL_UPLOAD_DIR, "uploads"),
+  localDataDir: resolveFromRepo(process.env.LOCAL_DATA_DIR, "data"),
   s3: {
     bucket: process.env.S3_BUCKET ?? "",
     region: process.env.S3_REGION ?? "us-east-1",
