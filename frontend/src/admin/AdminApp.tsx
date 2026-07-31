@@ -207,6 +207,11 @@ export default function AdminApp() {
     window.open(zipUrl(token, submissionId), "_blank", "noopener,noreferrer");
   }
 
+  function downloadAllZips() {
+    const url = `/api/admin/submissions/download-all.zip?token=${encodeURIComponent(token)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   function logout() {
     sessionStorage.removeItem(TOKEN_KEY);
     setToken("");
@@ -572,6 +577,11 @@ export default function AdminApp() {
               <h1>All applications</h1>
               <p className="muted">{loading ? "Loading…" : `${items.length} total`}</p>
             </div>
+            {items.length > 0 ? (
+              <button type="button" className="btn primary" onClick={downloadAllZips}>
+                Download all ZIPs
+              </button>
+            ) : null}
           </div>
           {items.length === 0 && !loading ? (
             <p className="muted">No submissions yet.</p>

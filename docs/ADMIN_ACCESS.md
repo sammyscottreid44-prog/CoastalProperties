@@ -31,6 +31,7 @@ KqKcSMDffHOc9AHrKqvZgZGi
 - **View** uploaded images in a lightbox; open PDFs inline
 - Download individual files
 - Download each application as its own **ZIP** (readable summary + JSON + all files in folders)
+- **Download all ZIPs** from the main list (one master ZIP containing every application ZIP)
 
 ## Notes
 

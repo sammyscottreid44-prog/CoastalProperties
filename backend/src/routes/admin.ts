@@ -6,6 +6,7 @@ import {
   getSubmission,
   listSubmissions,
   openStoredFileStream,
+  type SubmissionRecord,
 } from "../services/submissions.js";
 
 export const adminRouter = Router();
@@ -16,6 +17,54 @@ adminRouter.get("/submissions", async (_req, res, next) => {
   try {
     const items = await listSubmissions();
     res.json({ success: true, submissions: items });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.get("/submissions/download-all.zip", async (_req, res, next) => {
+  try {
+    const items = await listSubmissions();
+    if (items.length === 0) {
+      res.status(404).json({ success: false, message: "No submissions to download" });
+      return;
+    }
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="coastapply-all-applications-${stamp}.zip"`,
+    );
+
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    archive.on("error", (err: Error) => next(err));
+    archive.pipe(res);
+
+    const usedZipNames = new Set<string>();
+    for (const item of items) {
+      const record = await getSubmission(item.submission_id);
+      if (!record) continue;
+      let zipName = `${submissionZipBase(record)}.zip`;
+      if (usedZipNames.has(zipName)) {
+        zipName = `${submissionZipBase(record)}-${record.submission_id.slice(0, 8)}.zip`;
+      }
+      usedZipNames.add(zipName);
+
+      const inner = new ZipArchive({ zlib: { level: 9 } });
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        inner.on("error", reject);
+        inner.on("data", (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+        inner.on("end", () => resolve());
+        void appendSubmissionToArchive(inner, record, "").then(() => inner.finalize()).catch(reject);
+      });
+      archive.append(Buffer.concat(chunks), { name: zipName });
+    }
+
+    await archive.finalize();
   } catch (err) {
     next(err);
   }
@@ -83,18 +132,7 @@ adminRouter.get("/submissions/:id/download.zip", async (req, res, next) => {
       return;
     }
 
-    const applicant = (record.payload as { applicant?: { first_name?: string; last_name?: string } })
-      .applicant;
-    const nameParts = [applicant?.first_name, applicant?.last_name]
-      .filter(Boolean)
-      .join("-")
-      .replace(/[^a-zA-Z0-9._-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .toLowerCase();
-    const zipBase = nameParts
-      ? `${nameParts}-${record.submission_id.slice(0, 8)}`
-      : `application-${record.submission_id.slice(0, 8)}`;
+    const zipBase = submissionZipBase(record);
 
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="${zipBase}.zip"`);
@@ -103,37 +141,60 @@ adminRouter.get("/submissions/:id/download.zip", async (req, res, next) => {
     archive.on("error", (err: Error) => next(err));
     archive.pipe(res);
 
-    archive.append(JSON.stringify(record, null, 2), { name: "submission.json" });
-    archive.append(buildReadableSummary(record), { name: "application-summary.txt" });
-
-    const usedNames = new Set<string>();
-    for (const file of allFilesForRecord(record)) {
-      try {
-        const opened = await openStoredFileStream(file);
-        const parts = file.key.split("/");
-        const folder = parts[2] || "files";
-        let entryName = `${folder}/${file.originalName}`;
-        if (usedNames.has(entryName)) {
-          const stamp = Date.now().toString(36);
-          const dot = file.originalName.lastIndexOf(".");
-          const renamed =
-            dot > 0
-              ? `${file.originalName.slice(0, dot)}-${stamp}${file.originalName.slice(dot)}`
-              : `${file.originalName}-${stamp}`;
-          entryName = `${folder}/${renamed}`;
-        }
-        usedNames.add(entryName);
-        archive.append(opened.stream, { name: entryName });
-      } catch {
-        // skip missing files
-      }
-    }
-
+    await appendSubmissionToArchive(archive, record, "");
     await archive.finalize();
   } catch (err) {
     next(err);
   }
 });
+
+function submissionZipBase(record: SubmissionRecord): string {
+  const applicant = (record.payload as { applicant?: { first_name?: string; last_name?: string } })
+    .applicant;
+  const nameParts = [applicant?.first_name, applicant?.last_name]
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  return nameParts
+    ? `${nameParts}-${record.submission_id.slice(0, 8)}`
+    : `application-${record.submission_id.slice(0, 8)}`;
+}
+
+async function appendSubmissionToArchive(
+  archive: ZipArchive,
+  record: SubmissionRecord,
+  prefix: string,
+): Promise<void> {
+  const root = prefix ? `${prefix.replace(/\/$/, "")}/` : "";
+  archive.append(JSON.stringify(record, null, 2), { name: `${root}submission.json` });
+  archive.append(buildReadableSummary(record), { name: `${root}application-summary.txt` });
+
+  const usedNames = new Set<string>();
+  for (const file of allFilesForRecord(record)) {
+    try {
+      const opened = await openStoredFileStream(file);
+      const parts = file.key.split("/");
+      const folder = parts[2] || "files";
+      let entryName = `${root}${folder}/${file.originalName}`;
+      if (usedNames.has(entryName)) {
+        const stamp = Date.now().toString(36);
+        const dot = file.originalName.lastIndexOf(".");
+        const renamed =
+          dot > 0
+            ? `${file.originalName.slice(0, dot)}-${stamp}${file.originalName.slice(dot)}`
+            : `${file.originalName}-${stamp}`;
+        entryName = `${root}${folder}/${renamed}`;
+      }
+      usedNames.add(entryName);
+      archive.append(opened.stream, { name: entryName });
+    } catch {
+      // skip missing files
+    }
+  }
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
