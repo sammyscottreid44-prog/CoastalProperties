@@ -111,13 +111,32 @@ Missing required vars fail fast at startup.
 
 Liveness + active storage/email drivers.
 
-## Deploy to Vercel (coastapply.com)
+## Domain on Squarespace + app on Vercel
 
-1. Create a Vercel project from this repository.
-2. Set **Root Directory** to the repo root.
-3. Point the custom domain `coastapply.com` (and optionally `www`) at the project.
-4. In Resend, verify `coastapply.com` and use a from-address on that domain.
-5. Configure environment variables:
+Squarespace can own/register `coastapply.com` and manage DNS. It **cannot** host this Node.js + React application portal (APIs, uploads, PDF, email). Keep the domain at Squarespace; run the app on Vercel; point Squarespace DNS at Vercel.
+
+Your current Squarespace website A records (`198.185.159.*` / `198.49.23.*`) are for Squarespace’s website builder. Replace those website records with Vercel’s so `coastapply.com` serves CoastApply.
+
+### A) Squarespace DNS (you do this in Squarespace Domains)
+
+1. Log in → **Domains** → `coastapply.com` → **DNS settings** / **DNS records**.
+2. Remove or disable the Squarespace **website** A / CNAME records that point at Squarespace hosting (the `198.185.159.*` / `198.49.23.*` hints).
+3. Add:
+
+| Type | Host | Data |
+| --- | --- | --- |
+| **A** | `@` | `76.76.21.21` |
+| **CNAME** | `www` | `cname.vercel-dns.com` |
+
+4. Leave any Squarespace **email** / Resend verification TXT / MX / DKIM records alone when you add them later.
+5. Save. Propagation is often minutes; can take up to 48 hours.
+
+### B) Vercel app deploy
+
+1. Create a Vercel project from this GitHub repository (root directory = repo root).
+2. Project → **Settings → Domains** → add `coastapply.com` and `www.coastapply.com`.
+3. In Resend, verify `coastapply.com` (add the TXT/DKIM records Resend shows back into Squarespace DNS).
+4. Set Vercel environment variables:
 
 ```text
 NODE_ENV=production
@@ -136,7 +155,7 @@ EMAIL_FROM=CoastApply <applications@coastapply.com>
 NOTIFY_EMAIL=sammyscottreid44@gmail.com
 ```
 
-6. Deploy:
+5. Deploy:
 
 ```bash
 npx vercel --prod
@@ -146,12 +165,13 @@ npx vercel --prod
 
 ```bash
 cp .env.example .env
-# Fill production secrets in .env and Vercel project settings (never commit .env)
+# Fill production secrets in Vercel project settings (never commit .env)
 npm install
 npm run build
 npm run smoke          # against a running local server first
 npx vercel link        # once
 npx vercel --prod
+# After Squarespace DNS + Vercel domain are connected:
 SMOKE_API_BASE=https://coastapply.com npm run smoke
 ```
 
