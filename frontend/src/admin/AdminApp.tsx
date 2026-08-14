@@ -124,6 +124,8 @@ export default function AdminApp() {
   const [items, setItems] = useState<SubmissionSummary[]>([]);
   const [selected, setSelected] = useState<SubmissionDetail | null>(null);
   const [preview, setPreview] = useState<PreviewFile | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [busyAction, setBusyAction] = useState(false);
 
   async function loadList(activeToken: string) {
     setLoading(true);
@@ -140,6 +142,7 @@ export default function AdminApp() {
         return;
       }
       setItems(data.submissions ?? []);
+      setSelectedIds([]);
     } catch {
       setError("Could not load submissions");
     } finally {
@@ -210,6 +213,109 @@ export default function AdminApp() {
   function downloadAllZips() {
     const url = `/api/admin/submissions/download-all.zip?token=${encodeURIComponent(token)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === items.length) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(items.map((item) => item.submission_id));
+  }
+
+  async function deleteSelected() {
+    if (selectedIds.length === 0) return;
+    const confirmed = window.confirm(
+      `Delete ${selectedIds.length} selected application${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setBusyAction(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/submissions/delete", {
+        method: "POST",
+        headers: {
+          ...authHeaders(token),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || "Could not delete selected submissions");
+        return;
+      }
+      if (selected && selectedIds.includes(selected.submission_id)) {
+        setSelected(null);
+      }
+      await loadList(token);
+    } catch {
+      setError("Could not delete selected submissions");
+    } finally {
+      setBusyAction(false);
+    }
+  }
+
+  async function deleteAll() {
+    if (items.length === 0) return;
+    const confirmed = window.confirm(
+      `Delete ALL ${items.length} applications? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    const doubleCheck = window.prompt('Type DELETE ALL to confirm wiping every application:');
+    if (doubleCheck !== "DELETE ALL") return;
+
+    setBusyAction(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/submissions", {
+        method: "DELETE",
+        headers: authHeaders(token),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || "Could not delete all submissions");
+        return;
+      }
+      setSelected(null);
+      await loadList(token);
+    } catch {
+      setError("Could not delete all submissions");
+    } finally {
+      setBusyAction(false);
+    }
+  }
+
+  async function deleteOne(id: string) {
+    const confirmed = window.confirm("Delete this application? This cannot be undone.");
+    if (!confirmed) return;
+
+    setBusyAction(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/submissions/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || "Could not delete submission");
+        return;
+      }
+      if (selected?.submission_id === id) setSelected(null);
+      await loadList(token);
+    } catch {
+      setError("Could not delete submission");
+    } finally {
+      setBusyAction(false);
+    }
   }
 
   function logout() {
@@ -335,6 +441,14 @@ export default function AdminApp() {
                 onClick={() => downloadZip(selected.submission_id)}
               >
                 Download application ZIP
+              </button>
+              <button
+                type="button"
+                className="btn ghost danger"
+                disabled={busyAction}
+                onClick={() => void deleteOne(selected.submission_id)}
+              >
+                Delete application
               </button>
               <button
                 type="button"
@@ -577,11 +691,31 @@ export default function AdminApp() {
               <h1>All applications</h1>
               <p className="muted">{loading ? "Loading…" : `${items.length} total`}</p>
             </div>
-            {items.length > 0 ? (
-              <button type="button" className="btn primary" onClick={downloadAllZips}>
-                Download all ZIPs
-              </button>
-            ) : null}
+            <div className="admin-list-actions">
+              {items.length > 0 ? (
+                <>
+                  <button type="button" className="btn primary" onClick={downloadAllZips}>
+                    Download all ZIPs
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    disabled={busyAction || selectedIds.length === 0}
+                    onClick={() => void deleteSelected()}
+                  >
+                    Delete selected{selectedIds.length ? ` (${selectedIds.length})` : ""}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost danger"
+                    disabled={busyAction}
+                    onClick={() => void deleteAll()}
+                  >
+                    Delete all
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
           {items.length === 0 && !loading ? (
             <p className="muted">No submissions yet.</p>
@@ -590,6 +724,14 @@ export default function AdminApp() {
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th className="admin-check-col">
+                      <input
+                        type="checkbox"
+                        checked={items.length > 0 && selectedIds.length === items.length}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all applications"
+                      />
+                    </th>
                     <th>When</th>
                     <th>Applicant</th>
                     <th>Role</th>
@@ -600,6 +742,14 @@ export default function AdminApp() {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.submission_id}>
+                      <td className="admin-check-col">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.submission_id)}
+                          onChange={() => toggleSelected(item.submission_id)}
+                          aria-label={`Select ${item.applicant_name || item.submission_id}`}
+                        />
+                      </td>
                       <td>{new Date(item.created_at).toLocaleString()}</td>
                       <td>
                         <div className="admin-name">{item.applicant_name || "Unnamed"}</div>
@@ -622,6 +772,14 @@ export default function AdminApp() {
                             onClick={() => downloadZip(item.submission_id)}
                           >
                             ZIP
+                          </button>
+                          <button
+                            type="button"
+                            className="btn ghost danger"
+                            disabled={busyAction}
+                            onClick={() => void deleteOne(item.submission_id)}
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>

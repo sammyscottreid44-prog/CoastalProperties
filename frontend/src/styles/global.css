@@ -345,6 +345,22 @@ body::before {
   border: 1px solid rgba(15, 110, 92, 0.35);
 }
 
+.btn.ghost.danger,
+.btn.danger {
+  color: #8a1f1f;
+  border-color: rgba(138, 31, 31, 0.35);
+}
+
+.btn.ghost.danger:hover:not(:disabled),
+.btn.danger:hover:not(:disabled) {
+  background: rgba(138, 31, 31, 0.08);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .nav-row {
   display: flex;
   justify-content: space-between;
@@ -585,6 +601,17 @@ body::before {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+.admin-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.admin-check-col {
+  width: 2.2rem;
 }
 
 .admin-detail {

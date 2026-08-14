@@ -1,10 +1,11 @@
 import { createReadStream } from "node:fs";
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { config } from "../config.js";
 import type { StoredFile } from "./storage.js";
 import type { ApplicationPayload } from "../utils/validation.js";
 import { storeFile } from "./storage.js";
+import { logger } from "../utils/logger.js";
 
 export type SubmissionRecord = {
   submission_id: string;
@@ -114,4 +115,62 @@ export function allFilesForRecord(record: SubmissionRecord): StoredFile[] {
     if (!already) files.push(record.summary_pdf);
   }
   return files;
+}
+
+function safeSubmissionId(submissionId: string): string | null {
+  const safeId = path.basename(submissionId);
+  if (safeId !== submissionId || !safeId) return null;
+  return safeId;
+}
+
+export async function deleteSubmission(submissionId: string): Promise<boolean> {
+  const safeId = safeSubmissionId(submissionId);
+  if (!safeId) return false;
+
+  const metaPath = path.join(config.localDataDir, `${safeId}.json`);
+  let existed = false;
+  try {
+    await access(metaPath);
+    existed = true;
+    await unlink(metaPath);
+  } catch {
+    // metadata may already be gone
+  }
+
+  const uploadDir = path.join(config.localUploadDir, "submissions", safeId);
+  try {
+    await rm(uploadDir, { recursive: true, force: true });
+    existed = true;
+  } catch {
+    // upload folder may already be gone
+  }
+
+  if (existed) {
+    logger.info("submission_deleted", { submission_id: safeId });
+  }
+  return existed;
+}
+
+export async function deleteSubmissions(submissionIds: string[]): Promise<{
+  deleted: string[];
+  missing: string[];
+}> {
+  const deleted: string[] = [];
+  const missing: string[] = [];
+  for (const id of submissionIds) {
+    const ok = await deleteSubmission(id);
+    if (ok) deleted.push(id);
+    else missing.push(id);
+  }
+  return { deleted, missing };
+}
+
+export async function deleteAllSubmissions(): Promise<number> {
+  const items = await listSubmissions();
+  let count = 0;
+  for (const item of items) {
+    if (await deleteSubmission(item.submission_id)) count += 1;
+  }
+  logger.info("submissions_deleted_all", { count });
+  return count;
 }

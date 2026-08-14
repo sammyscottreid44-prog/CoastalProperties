@@ -3,6 +3,9 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/adminAuth.js";
 import {
   allFilesForRecord,
+  deleteAllSubmissions,
+  deleteSubmission,
+  deleteSubmissions,
   getSubmission,
   listSubmissions,
   openStoredFileStream,
@@ -17,6 +20,44 @@ adminRouter.get("/submissions", async (_req, res, next) => {
   try {
     const items = await listSubmissions();
     res.json({ success: true, submissions: items });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.delete("/submissions", async (_req, res, next) => {
+  try {
+    const deleted = await deleteAllSubmissions();
+    res.json({ success: true, deleted });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.post("/submissions/delete", async (req, res, next) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.filter((id: unknown): id is string => typeof id === "string" && id.trim() !== "")
+      : [];
+    if (ids.length === 0) {
+      res.status(400).json({ success: false, message: "No submission ids provided" });
+      return;
+    }
+    const result = await deleteSubmissions(ids);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminRouter.delete("/submissions/:id", async (req, res, next) => {
+  try {
+    const deleted = await deleteSubmission(req.params.id);
+    if (!deleted) {
+      res.status(404).json({ success: false, message: "Submission not found" });
+      return;
+    }
+    res.json({ success: true, deleted: req.params.id });
   } catch (err) {
     next(err);
   }
