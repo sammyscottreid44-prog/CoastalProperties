@@ -6,7 +6,7 @@ import helmet from "helmet";
 import { brand } from "./brand.js";
 import { config } from "./config.js";
 import { errorHandler, HttpError } from "./middleware/errorHandler.js";
-import { apiRateLimiter } from "./middleware/rateLimit.js";
+import { apiRateLimiter, adminRateLimiter } from "./middleware/rateLimit.js";
 import { adminRouter } from "./routes/admin.js";
 import { applicationRouter } from "./routes/application.js";
 import { logger } from "./utils/logger.js";
@@ -83,7 +83,7 @@ export function createApp() {
   });
 
   app.use("/api/application", apiRateLimiter, applicationRouter);
-  app.use("/api/admin", apiRateLimiter, adminRouter);
+  app.use("/api/admin", adminRateLimiter, adminRouter);
 
   const frontendDist = path.resolve(__dirname, "../../frontend/dist");
   app.use(express.static(frontendDist));
