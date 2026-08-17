@@ -1,0 +1,23 @@
+{
+  "name": "coastapply-application-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CoastApply — Coastal Commercial Property online application portal",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c teal,cyan \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm run start -w backend",
+    "smoke": "node scripts/smoke-test.mjs",
+    "lint": "npm run lint -w backend && npm run lint -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

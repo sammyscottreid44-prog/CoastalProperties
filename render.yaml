@@ -1,0 +1,33 @@
+# DEPRECATED — use Railway instead (see docs/INSTANT_ACCESS.md).
+# Left in place only as a leftover; do not use for go-live.
+services:
+  - type: web
+    name: coastapply
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: APP_BASE_URL
+        value: https://coastapply.com
+      - key: CORS_ORIGINS
+        value: https://coastapply.com,https://www.coastapply.com
+      - key: STORAGE_DRIVER
+        value: local
+      - key: LOCAL_UPLOAD_DIR
+        value: ./uploads
+      - key: LOCAL_DATA_DIR
+        value: ./data
+      - key: EMAIL_DRIVER
+        value: console
+      - key: EMAIL_FROM
+        value: CoastApply <applications@coastapply.com>
+      - key: NOTIFY_EMAIL
+        value: sammyscottreid44@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false
